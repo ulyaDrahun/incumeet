@@ -172,14 +172,6 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Quick Action */}
-      <div className="p-3 border-t border-sidebar-border">
-        <Button className="w-full justify-start gap-2" size="sm">
-          <Plus className="h-4 w-4" />
-          New Meeting
-        </Button>
-      </div>
-
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
         <SidebarItem

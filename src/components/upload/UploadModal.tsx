@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Mic, Video, Upload, Loader2 } from "lucide-react";
+import { FileText, Mic, Video, Upload, Loader2, FolderPlus, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,15 +10,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { Folder } from "@/types";
 
 type UploadType = "text" | "audio" | "video";
 
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  folderId?: string;
-  onUpload?: (data: { title: string; type: UploadType; content: string }) => void;
+  folders: Folder[];
+  defaultFolderId?: string;
+  onUpload?: (data: {
+    title: string;
+    type: UploadType;
+    content: string;
+    folderId: string;
+    newFolderName?: string;
+  }) => Promise<void>;
+  onCreateFolder?: (name: string) => string; // returns new folder id
 }
 
 const uploadOptions = [
@@ -45,169 +61,304 @@ const uploadOptions = [
 export function UploadModal({
   open,
   onOpenChange,
-  folderId,
+  folders,
+  defaultFolderId,
   onUpload,
+  onCreateFolder,
 }: UploadModalProps) {
-  const [step, setStep] = useState<"select" | "input">("select");
-  const [selectedType, setSelectedType] = useState<UploadType | null>(null);
   const [title, setTitle] = useState("");
+  const [selectedType, setSelectedType] = useState<UploadType | null>(null);
   const [content, setContent] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [folderId, setFolderId] = useState<string>(defaultFolderId || "");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleTypeSelect = (type: UploadType) => {
-    setSelectedType(type);
-    setStep("input");
+  const newFolderInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isCreatingFolder && newFolderInputRef.current) {
+      newFolderInputRef.current.focus();
+    }
+  }, [isCreatingFolder]);
+
+  useEffect(() => {
+    if (defaultFolderId) {
+      setFolderId(defaultFolderId);
+    }
+  }, [defaultFolderId]);
+
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    if (onCreateFolder) {
+      const id = onCreateFolder(newFolderName.trim());
+      setFolderId(id);
+    }
+    setIsCreatingFolder(false);
+    setNewFolderName("");
   };
 
-  const handleBack = () => {
-    setStep("select");
-    setSelectedType(null);
-    setContent("");
+  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAudioFile(file);
+      setContent(file.name);
+    }
   };
 
   const handleSubmit = async () => {
-    if (!selectedType || !title) return;
-    
+    if (!title.trim() || !selectedType) {
+      setError("Please enter a meeting title and select a content type.");
+      return;
+    }
+    if (!folderId && !isCreatingFolder && !newFolderName) {
+      setError("Please select or create a folder.");
+      return;
+    }
+
+    setError(null);
     setIsUploading(true);
-    // Simulate upload delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    onUpload?.({ title, type: selectedType, content });
-    setIsUploading(false);
-    onOpenChange(false);
-    
-    // Reset form
-    setStep("select");
-    setSelectedType(null);
-    setTitle("");
-    setContent("");
+
+    try {
+      await onUpload?.({
+        title: title.trim(),
+        type: selectedType,
+        content,
+        folderId: folderId || "new",
+        newFolderName: folderId ? undefined : newFolderName.trim(),
+      });
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create meeting.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleClose = () => {
     onOpenChange(false);
-    setStep("select");
-    setSelectedType(null);
+    // Reset
     setTitle("");
+    setSelectedType(null);
     setContent("");
+    setAudioFile(null);
+    setFolderId(defaultFolderId || "");
+    setIsCreatingFolder(false);
+    setNewFolderName("");
+    setError(null);
   };
+
+  const selectedFolder = folders.find((f) => f.id === folderId);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>
-            {step === "select" ? "Upload Meeting" : `New ${selectedType === "text" ? "Text" : selectedType === "audio" ? "Audio" : "Video"} Meeting`}
-          </DialogTitle>
+          <DialogTitle>New Meeting</DialogTitle>
         </DialogHeader>
 
-        <AnimatePresence mode="wait">
-          {step === "select" && (
-            <motion.div
-              key="select"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="grid gap-3 py-4"
-            >
+        <div className="space-y-5 py-4">
+          {/* 1. Meeting Title */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Meeting Title</label>
+            <Input
+              placeholder="e.g., Weekly Team Sync"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+
+          {/* 2. Upload Type Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Upload Content</label>
+            <div className="grid gap-2">
               {uploadOptions.map((option) => (
                 <button
                   key={option.type}
-                  onClick={() => handleTypeSelect(option.type)}
-                  className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-accent transition-all text-left group"
+                  onClick={() => {
+                    setSelectedType(option.type);
+                    setContent("");
+                    setAudioFile(null);
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
+                    selectedType === option.type
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50 hover:bg-accent"
+                  )}
                 >
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <option.icon className="h-6 w-6 text-primary" />
+                  <div
+                    className={cn(
+                      "w-9 h-9 rounded-md flex items-center justify-center",
+                      selectedType === option.type ? "bg-primary/20" : "bg-secondary"
+                    )}
+                  >
+                    <option.icon
+                      className={cn(
+                        "h-5 w-5",
+                        selectedType === option.type ? "text-primary" : "text-muted-foreground"
+                      )}
+                    />
                   </div>
-                  <div>
-                    <p className="font-medium">{option.label}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {option.description}
-                    </p>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{option.label}</p>
+                    <p className="text-xs text-muted-foreground">{option.description}</p>
                   </div>
+                  {selectedType === option.type && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
                 </button>
               ))}
-            </motion.div>
-          )}
+            </div>
+          </div>
 
-          {step === "input" && (
-            <motion.div
-              key="input"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4 py-4"
-            >
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Meeting Title</label>
-                <Input
-                  placeholder="e.g., Weekly Team Sync"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+          {/* 2b. Content Input Area */}
+          <AnimatePresence mode="wait">
+            {selectedType === "text" && (
+              <motion.div
+                key="text"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 overflow-hidden"
+              >
+                <label className="text-sm font-medium">Transcript</label>
+                <Textarea
+                  placeholder="Paste your meeting transcript here..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[140px] resize-none"
                 />
-              </div>
+              </motion.div>
+            )}
 
-              {selectedType === "text" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Transcript</label>
-                  <Textarea
-                    placeholder="Paste your meeting transcript here..."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="min-h-[200px] resize-none"
-                  />
-                </div>
-              )}
-
-              {selectedType === "audio" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Audio File</label>
-                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      MP3, WAV, M4A up to 100MB
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {selectedType === "video" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Video URL</label>
-                  <Input
-                    placeholder="https://youtube.com/watch?v=..."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    YouTube, Loom, Vimeo, or direct video links
-                  </p>
-                </div>
-              )}
-
-              <div className="flex justify-between pt-4">
-                <Button variant="ghost" onClick={handleBack}>
-                  Back
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!title || isUploading}
+            {selectedType === "audio" && (
+              <motion.div
+                key="audio"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 overflow-hidden"
+              >
+                <label className="text-sm font-medium">Audio File</label>
+                <input
+                  type="file"
+                  accept="audio/*"
+                  ref={audioInputRef}
+                  onChange={handleAudioChange}
+                  className="hidden"
+                />
+                <div
+                  onClick={() => audioInputRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
                 >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
+                  {audioFile ? (
+                    <p className="text-sm font-medium">{audioFile.name}</p>
                   ) : (
-                    "Upload & Generate Summary"
+                    <>
+                      <Upload className="h-7 w-7 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        MP3, WAV, M4A up to 100MB
+                      </p>
+                    </>
                   )}
+                </div>
+              </motion.div>
+            )}
+
+            {selectedType === "video" && (
+              <motion.div
+                key="video"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 overflow-hidden"
+              >
+                <label className="text-sm font-medium">Video URL</label>
+                <Input
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  YouTube, Loom, Vimeo, or direct video links
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 3. Folder Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Save To Folder</label>
+            {isCreatingFolder ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={newFolderInputRef}
+                  placeholder="New folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCreateFolder();
+                    if (e.key === "Escape") setIsCreatingFolder(false);
+                  }}
+                />
+                <Button size="sm" onClick={handleCreateFolder}>
+                  Create
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsCreatingFolder(false)}>
+                  Cancel
                 </Button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {selectedFolder ? selectedFolder.name : "Select a folder"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                  {folders.map((folder) => (
+                    <DropdownMenuItem key={folder.id} onClick={() => setFolderId(folder.id)}>
+                      {folder.name}
+                    </DropdownMenuItem>
+                  ))}
+                  {folders.length > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuItem onClick={() => setIsCreatingFolder(true)}>
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Create New Folder
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {/* Error */}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isUploading}>
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Upload & Generate Summary"
+              )}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
