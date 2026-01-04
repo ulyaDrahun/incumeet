@@ -8,9 +8,10 @@ import { QuickStats } from "@/components/dashboard/QuickStats";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import type { Folder, Meeting } from "@/types";
 
-const mockFolders: Folder[] = [
+const initialFolders: Folder[] = [
   {
     id: "1",
     name: "Team Meetings",
@@ -53,7 +54,7 @@ const mockFolders: Folder[] = [
   },
 ];
 
-const mockMeetings: Meeting[] = [
+const initialMeetings: Meeting[] = [
   {
     id: "1",
     title: "Q4 Planning Session",
@@ -108,10 +109,11 @@ const mockMeetings: Meeting[] = [
 ];
 
 export default function Dashboard() {
-  const [folders] = useState<Folder[]>(mockFolders);
-  const [meetings] = useState<Meeting[]>(mockMeetings);
+  const [folders, setFolders] = useState<Folder[]>(initialFolders);
+  const [meetings, setMeetings] = useState<Meeting[]>(initialMeetings);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
   const stats = {
     folderCount: folders.length,
@@ -122,6 +124,127 @@ export default function Dashboard() {
     urgentCount:
       folders.filter((f) => f.isUrgent).length +
       meetings.filter((m) => m.isUrgent).length,
+  };
+
+  // ====== Folder CRUD helpers ======
+  const handleCreateFolder = (name: string): string => {
+    const id = crypto.randomUUID();
+    const newFolder: Folder = {
+      id,
+      name,
+      parentId: null,
+      isStarred: false,
+      isUrgent: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      meetingCount: 0,
+    };
+    setFolders((prev) => [newFolder, ...prev]);
+    return id;
+  };
+
+  const handleFolderStar = (id: string) => {
+    setFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, isStarred: !f.isStarred } : f))
+    );
+  };
+
+  const handleFolderUrgent = (id: string) => {
+    setFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, isUrgent: !f.isUrgent } : f))
+    );
+  };
+
+  const handleFolderRename = (id: string, name: string) => {
+    setFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, name, updatedAt: new Date() } : f))
+    );
+  };
+
+  const handleFolderDelete = (id: string) => {
+    setFolders((prev) => prev.filter((f) => f.id !== id));
+    setMeetings((prev) => prev.filter((m) => m.folderId !== id));
+  };
+
+  // ====== Meeting CRUD helpers ======
+  const handleMeetingStar = (id: string) => {
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, isStarred: !m.isStarred } : m))
+    );
+  };
+
+  const handleMeetingUrgent = (id: string) => {
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, isUrgent: !m.isUrgent } : m))
+    );
+  };
+
+  const handleMeetingRename = (id: string, title: string) => {
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, title, updatedAt: new Date() } : m))
+    );
+  };
+
+  const handleMeetingDelete = (id: string) => {
+    setMeetings((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  // ====== Upload handler (simulates AI) ======
+  const handleUpload = async (data: {
+    title: string;
+    type: "text" | "audio" | "video";
+    content: string;
+    folderId: string;
+    newFolderName?: string;
+  }) => {
+    // If user created a new folder inline, create it now
+    let targetFolderId = data.folderId;
+    if (data.folderId === "new" && data.newFolderName) {
+      targetFolderId = handleCreateFolder(data.newFolderName);
+    }
+
+    // Simulate AI processing delay
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // Generate a mock summary (placeholder until real AI is wired)
+    const newMeeting: Meeting = {
+      id: crypto.randomUUID(),
+      title: data.title,
+      folderId: targetFolderId,
+      isStarred: false,
+      isUrgent: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      transcript: data.content,
+      summary: {
+        shortSummary:
+          "This is an AI-generated summary placeholder. Connect to Lovable Cloud to enable real AI summarization.",
+        keyDecisions: ["Decision 1 placeholder"],
+        actionItems: ["Action item placeholder"],
+      },
+      sourceType: data.type,
+    };
+
+    setMeetings((prev) => [newMeeting, ...prev]);
+
+    // Increment folder meeting count
+    setFolders((prev) =>
+      prev.map((f) =>
+        f.id === targetFolderId ? { ...f, meetingCount: f.meetingCount + 1 } : f
+      )
+    );
+
+    toast({
+      title: "Meeting created",
+      description: `"${data.title}" has been saved and summarized.`,
+    });
+  };
+
+  // New Folder button handler
+  const handleNewFolderClick = () => {
+    const id = handleCreateFolder("New Folder");
+    // Scroll the user's attention is already on the new folder card
+    // (card auto-focuses input when name === "New Folder")
   };
 
   return (
@@ -175,14 +298,26 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Folders</h2>
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={handleNewFolderClick}
+            >
               <FolderPlus className="h-4 w-4" />
               New Folder
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {folders.map((folder) => (
-              <FolderCard key={folder.id} folder={folder} />
+              <FolderCard
+                key={folder.id}
+                folder={folder}
+                onStar={handleFolderStar}
+                onUrgent={handleFolderUrgent}
+                onRename={handleFolderRename}
+                onDelete={handleFolderDelete}
+              />
             ))}
           </div>
         </motion.section>
@@ -198,7 +333,14 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {meetings.map((meeting) => (
-              <MeetingCard key={meeting.id} meeting={meeting} />
+              <MeetingCard
+                key={meeting.id}
+                meeting={meeting}
+                onStar={handleMeetingStar}
+                onUrgent={handleMeetingUrgent}
+                onRename={handleMeetingRename}
+                onDelete={handleMeetingDelete}
+              />
             ))}
           </div>
         </motion.section>
@@ -207,6 +349,9 @@ export default function Dashboard() {
       <UploadModal
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
+        folders={folders}
+        onUpload={handleUpload}
+        onCreateFolder={handleCreateFolder}
       />
     </AppLayout>
   );
