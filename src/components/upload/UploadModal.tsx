@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Mic, Video, Upload, Loader2, FolderPlus, Check, ChevronDown } from "lucide-react";
+import { FileText, Mic, Video, Upload, Loader2, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -66,19 +66,20 @@ export function UploadModal({
   const [content, setContent] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [folderId, setFolderId] = useState<string>(defaultFolderId || "");
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const newFolderInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isCreatingFolder && newFolderInputRef.current) {
+    if (showNewFolderInput && newFolderInputRef.current) {
       newFolderInputRef.current.focus();
     }
-  }, [isCreatingFolder]);
+  }, [showNewFolderInput]);
 
   useEffect(() => {
     if (defaultFolderId) {
@@ -86,12 +87,23 @@ export function UploadModal({
     }
   }, [defaultFolderId]);
 
-  const handleCreateFolder = () => {
-    if (!newFolderName.trim()) return;
-    const id = createFolder(newFolderName.trim());
-    setFolderId(id);
-    setIsCreatingFolder(false);
-    setNewFolderName("");
+  const handleNewFolderSelect = () => {
+    setShowNewFolderInput(true);
+    setFolderId("");
+    // Keep dropdown open
+  };
+
+  const handleNewFolderKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && newFolderName.trim()) {
+      const id = createFolder(newFolderName.trim());
+      setFolderId(id);
+      setShowNewFolderInput(false);
+      setNewFolderName("");
+      setDropdownOpen(false);
+    } else if (e.key === "Escape") {
+      setShowNewFolderInput(false);
+      setNewFolderName("");
+    }
   };
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +119,14 @@ export function UploadModal({
       setError("Please enter a meeting title and select a content type.");
       return;
     }
-    if (!folderId && !isCreatingFolder && !newFolderName) {
+    
+    // Allow creating with new folder name typed but not yet confirmed
+    let targetFolderId = folderId;
+    if (!folderId && newFolderName.trim()) {
+      targetFolderId = createFolder(newFolderName.trim());
+    }
+    
+    if (!targetFolderId) {
       setError("Please select or create a folder.");
       return;
     }
@@ -120,18 +139,12 @@ export function UploadModal({
     setIsUploading(true);
 
     try {
-      // If user created a new folder inline, create it now
-      let targetFolderId = folderId;
-      if (!folderId && newFolderName.trim()) {
-        targetFolderId = createFolder(newFolderName.trim());
-      }
-
       // Create meeting with placeholder summary (will be replaced by AI)
       const meetingId = createMeeting({
         title: title.trim(),
         folderId: targetFolderId,
         isStarred: false,
-        isUrgent: false,
+        isPinned: false,
         transcript: content,
         summary: null, // Will be generated
         sourceType: selectedType,
@@ -174,9 +187,10 @@ export function UploadModal({
     setContent("");
     setAudioFile(null);
     setFolderId(defaultFolderId || "");
-    setIsCreatingFolder(false);
+    setShowNewFolderInput(false);
     setNewFolderName("");
     setError(null);
+    setDropdownOpen(false);
   };
 
   const selectedFolder = folders.find((f) => f.id === folderId);
@@ -324,47 +338,51 @@ export function UploadModal({
           {/* 3. Folder Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Save To Folder</label>
-            {isCreatingFolder ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  ref={newFolderInputRef}
-                  placeholder="New folder name"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreateFolder();
-                    if (e.key === "Escape") setIsCreatingFolder(false);
-                  }}
-                />
-                <Button size="sm" onClick={handleCreateFolder}>
-                  Create
+            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  {selectedFolder ? selectedFolder.name : (newFolderName ? `New: ${newFolderName}` : "Select a folder")}
+                  <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setIsCreatingFolder(false)}>
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    {selectedFolder ? selectedFolder.name : "Select a folder"}
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                  {folders.map((folder) => (
-                    <DropdownMenuItem key={folder.id} onClick={() => setFolderId(folder.id)}>
-                      {folder.name}
-                    </DropdownMenuItem>
-                  ))}
-                  {folders.length > 0 && <DropdownMenuSeparator />}
-                  <DropdownMenuItem onClick={() => setIsCreatingFolder(true)}>
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Create New Folder
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                {folders.map((folder) => (
+                  <DropdownMenuItem 
+                    key={folder.id} 
+                    onClick={() => {
+                      setFolderId(folder.id);
+                      setShowNewFolderInput(false);
+                      setNewFolderName("");
+                    }}
+                  >
+                    {folder.name}
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                ))}
+                {folders.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNewFolderSelect();
+                  }}
+                  className="focus:bg-transparent"
+                >
+                  <span className="text-primary">+ New Folder</span>
+                </DropdownMenuItem>
+                {showNewFolderInput && (
+                  <div className="px-2 py-1.5">
+                    <Input
+                      ref={newFolderInputRef}
+                      placeholder="Enter folder name..."
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={handleNewFolderKeyDown}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-8"
+                    />
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Error */}

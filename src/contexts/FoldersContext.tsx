@@ -9,40 +9,44 @@ const initialFolders: Folder[] = [
     name: "Team Meetings",
     parentId: null,
     isStarred: true,
-    isUrgent: false,
+    isPinned: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     meetingCount: 5,
+    order: 0,
   },
   {
     id: "2",
     name: "Client Calls",
     parentId: null,
     isStarred: false,
-    isUrgent: true,
+    isPinned: true,
     createdAt: new Date(),
     updatedAt: new Date(),
     meetingCount: 3,
+    order: 1,
   },
   {
     id: "3",
     name: "1:1 Sessions",
     parentId: null,
     isStarred: false,
-    isUrgent: false,
+    isPinned: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     meetingCount: 8,
+    order: 2,
   },
   {
     id: "4",
     name: "Product Reviews",
     parentId: null,
     isStarred: true,
-    isUrgent: false,
+    isPinned: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     meetingCount: 2,
+    order: 3,
   },
 ];
 
@@ -52,7 +56,7 @@ const initialMeetings: Meeting[] = [
     title: "Q4 Planning Session",
     folderId: "1",
     isStarred: true,
-    isUrgent: false,
+    isPinned: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 30),
     updatedAt: new Date(),
     transcript: "",
@@ -63,13 +67,14 @@ const initialMeetings: Meeting[] = [
       actionItems: [],
     },
     sourceType: "text",
+    order: 0,
   },
   {
     id: "2",
     title: "Client Onboarding - Acme Corp",
     folderId: "2",
     isStarred: false,
-    isUrgent: true,
+    isPinned: true,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
     updatedAt: new Date(),
     transcript: "",
@@ -80,13 +85,14 @@ const initialMeetings: Meeting[] = [
       actionItems: [],
     },
     sourceType: "audio",
+    order: 0,
   },
   {
     id: "3",
     title: "Weekly Engineering Sync",
     folderId: "1",
     isStarred: false,
-    isUrgent: false,
+    isPinned: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
     updatedAt: new Date(),
     transcript: "",
@@ -97,25 +103,29 @@ const initialMeetings: Meeting[] = [
       actionItems: [],
     },
     sourceType: "video",
+    order: 1,
   },
 ];
 
 interface FoldersContextType {
   folders: Folder[];
   meetings: Meeting[];
-  createFolder: (name: string) => string;
+  createFolder: (name: string, parentId?: string | null) => string;
   updateFolder: (id: string, updates: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
   toggleFolderStar: (id: string) => void;
-  toggleFolderUrgent: (id: string) => void;
-  createMeeting: (meeting: Omit<Meeting, "id" | "createdAt" | "updatedAt">) => string;
+  toggleFolderPinned: (id: string) => void;
+  reorderFolders: (activeId: string, overId: string) => void;
+  moveFolderIntoFolder: (folderId: string, targetParentId: string | null) => void;
+  createMeeting: (meeting: Omit<Meeting, "id" | "createdAt" | "updatedAt" | "order">) => string;
   updateMeeting: (id: string, updates: Partial<Meeting>) => void;
   deleteMeeting: (id: string) => void;
   toggleMeetingStar: (id: string) => void;
-  toggleMeetingUrgent: (id: string) => void;
+  toggleMeetingPinned: (id: string) => void;
   getMeetingsByFolder: (folderId: string) => Meeting[];
   getFolderById: (id: string) => Folder | undefined;
   getMeetingById: (id: string) => Meeting | undefined;
+  getSubfolders: (parentId: string | null) => Folder[];
   generateSummary: (meetingId: string, transcript: string) => Promise<void>;
 }
 
@@ -125,17 +135,20 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
   const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [meetings, setMeetings] = useState<Meeting[]>(initialMeetings);
 
-  const createFolder = (name: string): string => {
+  const createFolder = (name: string, parentId: string | null = null): string => {
     const id = crypto.randomUUID();
+    const siblings = folders.filter((f) => f.parentId === parentId);
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map((f) => f.order)) : -1;
     const newFolder: Folder = {
       id,
       name,
-      parentId: null,
+      parentId,
       isStarred: false,
-      isUrgent: false,
+      isPinned: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       meetingCount: 0,
+      order: maxOrder + 1,
     };
     setFolders((prev) => [newFolder, ...prev]);
     return id;
@@ -160,19 +173,42 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const toggleFolderUrgent = (id: string) => {
+  const toggleFolderPinned = (id: string) => {
     setFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, isUrgent: !f.isUrgent } : f))
+      prev.map((f) => (f.id === id ? { ...f, isPinned: !f.isPinned } : f))
     );
   };
 
-  const createMeeting = (meeting: Omit<Meeting, "id" | "createdAt" | "updatedAt">): string => {
+  const reorderFolders = (activeId: string, overId: string) => {
+    setFolders((prev) => {
+      const oldIndex = prev.findIndex((f) => f.id === activeId);
+      const newIndex = prev.findIndex((f) => f.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const updated = [...prev];
+      const [removed] = updated.splice(oldIndex, 1);
+      updated.splice(newIndex, 0, removed);
+      return updated.map((f, i) => ({ ...f, order: i }));
+    });
+  };
+
+  const moveFolderIntoFolder = (folderId: string, targetParentId: string | null) => {
+    setFolders((prev) =>
+      prev.map((f) =>
+        f.id === folderId ? { ...f, parentId: targetParentId, updatedAt: new Date() } : f
+      )
+    );
+  };
+
+  const createMeeting = (meeting: Omit<Meeting, "id" | "createdAt" | "updatedAt" | "order">): string => {
     const id = crypto.randomUUID();
+    const siblings = meetings.filter((m) => m.folderId === meeting.folderId);
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map((m) => m.order)) : -1;
     const newMeeting: Meeting = {
       ...meeting,
       id,
       createdAt: new Date(),
       updatedAt: new Date(),
+      order: maxOrder + 1,
     };
     setMeetings((prev) => [newMeeting, ...prev]);
     
@@ -214,9 +250,9 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const toggleMeetingUrgent = (id: string) => {
+  const toggleMeetingPinned = (id: string) => {
     setMeetings((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, isUrgent: !m.isUrgent } : m))
+      prev.map((m) => (m.id === id ? { ...m, isPinned: !m.isPinned } : m))
     );
   };
 
@@ -230,6 +266,10 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
 
   const getMeetingById = (id: string): Meeting | undefined => {
     return meetings.find((m) => m.id === id);
+  };
+
+  const getSubfolders = (parentId: string | null): Folder[] => {
+    return folders.filter((f) => f.parentId === parentId);
   };
 
   const generateSummary = async (meetingId: string, transcript: string): Promise<void> => {
@@ -260,15 +300,18 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
         updateFolder,
         deleteFolder,
         toggleFolderStar,
-        toggleFolderUrgent,
+        toggleFolderPinned,
+        reorderFolders,
+        moveFolderIntoFolder,
         createMeeting,
         updateMeeting,
         deleteMeeting,
         toggleMeetingStar,
-        toggleMeetingUrgent,
+        toggleMeetingPinned,
         getMeetingsByFolder,
         getFolderById,
         getMeetingById,
+        getSubfolders,
         generateSummary,
       }}
     >

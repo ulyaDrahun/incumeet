@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Folder, Star, AlertTriangle, MoreHorizontal, Pencil } from "lucide-react";
+import { Folder, Star, Pin, MoreHorizontal, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,7 +16,7 @@ import type { Folder as FolderType } from "@/types";
 interface FolderCardProps {
   folder: FolderType;
   onStar?: (id: string) => void;
-  onUrgent?: (id: string) => void;
+  onPin?: (id: string) => void;
   onRename?: (id: string, name: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -24,7 +24,7 @@ interface FolderCardProps {
 export function FolderCard({
   folder,
   onStar,
-  onUrgent,
+  onPin,
   onRename,
   onDelete,
 }: FolderCardProps) {
@@ -67,16 +67,6 @@ export function FolderCard({
       transition={{ duration: 0.2 }}
     >
       <div className="group relative bg-card rounded-xl border border-border p-4 shadow-card hover:shadow-elevated transition-all duration-200 cursor-pointer">
-        {/* Status Indicators */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5">
-          {folder.isStarred && (
-            <Star className="h-4 w-4 fill-starred text-starred" />
-          )}
-          {folder.isUrgent && (
-            <AlertTriangle className="h-4 w-4 fill-urgent text-urgent" />
-          )}
-        </div>
-
         {/* Folder Icon */}
         <Link to={`/folder/${folder.id}`} className="block">
           <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
@@ -102,6 +92,12 @@ export function FolderCard({
                   {folder.name}
                 </h3>
               </Link>
+              {folder.isStarred && (
+                <Star className="h-4 w-4 fill-starred text-starred shrink-0" />
+              )}
+              {folder.isPinned && (
+                <Pin className="h-4 w-4 fill-pinned text-pinned shrink-0" />
+              )}
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -132,9 +128,9 @@ export function FolderCard({
                 <Star className="h-4 w-4 mr-2" />
                 {folder.isStarred ? "Unstar" : "Star"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onUrgent?.(folder.id)}>
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                {folder.isUrgent ? "Remove Urgent" : "Mark Urgent"}
+              <DropdownMenuItem onClick={() => onPin?.(folder.id)}>
+                <Pin className="h-4 w-4 mr-2" />
+                {folder.isPinned ? "Unpin" : "Pin"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsEditing(true)}>
