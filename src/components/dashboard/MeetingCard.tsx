@@ -78,76 +78,95 @@ export function MeetingCard({
     }
   };
 
+  // Truncate summary for preview
+  const summaryPreview = meeting.summary?.shortSummary
+    ? meeting.summary.shortSummary.length > 80
+      ? meeting.summary.shortSummary.slice(0, 80) + "..."
+      : meeting.summary.shortSummary
+    : null;
+
   if (variant === "list") {
     return (
       <motion.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
-        className="group relative bg-card rounded-lg border border-border p-4 shadow-card hover:shadow-elevated transition-all duration-200 flex items-center gap-4"
+        className="group relative bg-card rounded-lg border border-border p-4 shadow-card hover:shadow-elevated transition-all duration-200"
       >
-        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-          <SourceIcon className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <div className="flex-1 min-w-0 flex items-center gap-2">
-          {isEditing ? (
-            <Input
-              ref={inputRef}
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={handleKeyDown}
-              className="h-7 text-sm font-semibold px-1 max-w-xs"
-            />
-          ) : (
-            <>
-              <Link to={`/meeting/${meeting.id}`} className="min-w-0 flex-1">
-                <h3 className="font-semibold text-foreground truncate">
-                  {meeting.title}
-                </h3>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+            <SourceIcon className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              {isEditing ? (
+                <Input
+                  ref={inputRef}
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={handleKeyDown}
+                  className="h-7 text-sm font-semibold px-1 max-w-xs"
+                />
+              ) : (
+                <>
+                  <Link to={`/meeting/${meeting.id}`} className="min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">
+                      {meeting.title}
+                    </h3>
+                  </Link>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsEditing(true);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    aria-label="Rename meeting"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </>
+              )}
+            </div>
+            {/* Summary preview in list view */}
+            {summaryPreview && (
+              <Link to={`/meeting/${meeting.id}`}>
+                <p className="text-sm text-muted-foreground truncate max-w-xl">
+                  {summaryPreview}
+                </p>
               </Link>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsEditing(true);
-                }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                aria-label="Rename meeting"
-              >
-                <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-              </button>
-            </>
-          )}
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+            <Calendar className="h-3 w-3" />
+            <span>{formatDistanceToNow(meeting.createdAt, { addSuffix: true })}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {meeting.isStarred && <Star className="h-4 w-4 fill-starred text-starred" />}
+            {meeting.isUrgent && <AlertTriangle className="h-4 w-4 fill-urgent text-urgent" />}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+              <Button variant="ghost" size="icon-sm" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onStar?.(meeting.id)}>
+                <Star className="h-4 w-4 mr-2" />
+                {meeting.isStarred ? "Unstar" : "Star"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onUrgent?.(meeting.id)}>
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                {meeting.isUrgent ? "Remove Urgent" : "Mark Urgent"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>Rename</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete?.(meeting.id)} className="text-destructive focus:text-destructive">
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-          <Calendar className="h-3 w-3" />
-          <span>{formatDistanceToNow(meeting.createdAt, { addSuffix: true })}</span>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {meeting.isStarred && <Star className="h-4 w-4 fill-starred text-starred" />}
-          {meeting.isUrgent && <AlertTriangle className="h-4 w-4 fill-urgent text-urgent" />}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-            <Button variant="ghost" size="icon-sm" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onStar?.(meeting.id)}>
-              <Star className="h-4 w-4 mr-2" />
-              {meeting.isStarred ? "Unstar" : "Star"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onUrgent?.(meeting.id)}>
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              {meeting.isUrgent ? "Remove Urgent" : "Mark Urgent"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setIsEditing(true)}>Rename</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete?.(meeting.id)} className="text-destructive focus:text-destructive">
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </motion.div>
     );
   }

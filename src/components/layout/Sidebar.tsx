@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -10,44 +9,11 @@ import {
   Settings,
   LogOut,
   ChevronRight,
-  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useFolders } from "@/contexts/FoldersContext";
 import type { Folder as FolderType } from "@/types";
-
-const mockFolders: FolderType[] = [
-  {
-    id: "1",
-    name: "Team Meetings",
-    parentId: null,
-    isStarred: true,
-    isUrgent: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    meetingCount: 5,
-  },
-  {
-    id: "2",
-    name: "Client Calls",
-    parentId: null,
-    isStarred: false,
-    isUrgent: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    meetingCount: 3,
-  },
-  {
-    id: "3",
-    name: "1:1s",
-    parentId: null,
-    isStarred: false,
-    isUrgent: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    meetingCount: 8,
-  },
-];
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -115,7 +81,11 @@ function FolderItem({ folder, isActive }: FolderItemProps) {
 
 export function Sidebar() {
   const location = useLocation();
-  const [folders] = useState<FolderType[]>(mockFolders);
+  const { folders, createFolder } = useFolders();
+
+  const handleNewFolder = () => {
+    createFolder("New Folder");
+  };
 
   return (
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -156,7 +126,7 @@ export function Sidebar() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Folders
             </span>
-            <Button variant="ghost" size="icon-sm" className="h-6 w-6">
+            <Button variant="ghost" size="icon-sm" className="h-6 w-6" onClick={handleNewFolder}>
               <FolderPlus className="h-3.5 w-3.5" />
             </Button>
           </div>
