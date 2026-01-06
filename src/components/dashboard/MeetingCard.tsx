@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   FileText,
   Star,
-  AlertTriangle,
+  Pin,
   MoreHorizontal,
   Calendar,
   Mic,
@@ -26,7 +26,7 @@ import { formatDistanceToNow } from "date-fns";
 interface MeetingCardProps {
   meeting: Meeting;
   onStar?: (id: string) => void;
-  onUrgent?: (id: string) => void;
+  onPin?: (id: string) => void;
   onRename?: (id: string, name: string) => void;
   onDelete?: (id: string) => void;
   variant?: "grid" | "list";
@@ -41,7 +41,7 @@ const sourceIcons = {
 export function MeetingCard({
   meeting,
   onStar,
-  onUrgent,
+  onPin,
   onRename,
   onDelete,
   variant = "grid",
@@ -142,7 +142,7 @@ export function MeetingCard({
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             {meeting.isStarred && <Star className="h-4 w-4 fill-starred text-starred" />}
-            {meeting.isUrgent && <AlertTriangle className="h-4 w-4 fill-urgent text-urgent" />}
+            {meeting.isPinned && <Pin className="h-4 w-4 fill-pinned text-pinned" />}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
@@ -155,9 +155,9 @@ export function MeetingCard({
                 <Star className="h-4 w-4 mr-2" />
                 {meeting.isStarred ? "Unstar" : "Star"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onUrgent?.(meeting.id)}>
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                {meeting.isUrgent ? "Remove Urgent" : "Mark Urgent"}
+              <DropdownMenuItem onClick={() => onPin?.(meeting.id)}>
+                <Pin className="h-4 w-4 mr-2" />
+                {meeting.isPinned ? "Unpin" : "Pin"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsEditing(true)}>Rename</DropdownMenuItem>
@@ -182,7 +182,7 @@ export function MeetingCard({
         {/* Status Indicators */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5">
           {meeting.isStarred && <Star className="h-4 w-4 fill-starred text-starred" />}
-          {meeting.isUrgent && <AlertTriangle className="h-4 w-4 fill-urgent text-urgent" />}
+          {meeting.isPinned && <Pin className="h-4 w-4 fill-pinned text-pinned" />}
         </div>
 
         {/* Header */}
@@ -246,9 +246,9 @@ export function MeetingCard({
                 <Star className="h-4 w-4 mr-2" />
                 {meeting.isStarred ? "Unstar" : "Star"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onUrgent?.(meeting.id)}>
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                {meeting.isUrgent ? "Remove Urgent" : "Mark Urgent"}
+              <DropdownMenuItem onClick={() => onPin?.(meeting.id)}>
+                <Pin className="h-4 w-4 mr-2" />
+                {meeting.isPinned ? "Unpin" : "Pin"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsEditing(true)}>Rename</DropdownMenuItem>

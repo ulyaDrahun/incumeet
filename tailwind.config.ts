@@ -58,7 +58,7 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         starred: "hsl(var(--starred))",
-        urgent: "hsl(var(--urgent))",
+        pinned: "hsl(var(--pinned))",
         success: "hsl(var(--success))",
       },
       borderRadius: {

@@ -10,10 +10,11 @@ export interface Folder {
   name: string;
   parentId: string | null;
   isStarred: boolean;
-  isUrgent: boolean;
+  isPinned: boolean;
   createdAt: Date;
   updatedAt: Date;
   meetingCount: number;
+  order: number;
 }
 
 export interface Meeting {
@@ -21,12 +22,13 @@ export interface Meeting {
   title: string;
   folderId: string;
   isStarred: boolean;
-  isUrgent: boolean;
+  isPinned: boolean;
   createdAt: Date;
   updatedAt: Date;
   transcript: string;
   summary: MeetingSummary | null;
   sourceType: 'text' | 'audio' | 'video';
+  order: number;
 }
 
 export interface MeetingSummary {
