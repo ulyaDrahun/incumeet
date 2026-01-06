@@ -18,6 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useFolders } from "@/contexts/FoldersContext";
 import type { Folder } from "@/types";
 
 type UploadType = "text" | "audio" | "video";
@@ -27,14 +29,6 @@ interface UploadModalProps {
   onOpenChange: (open: boolean) => void;
   folders: Folder[];
   defaultFolderId?: string;
-  onUpload?: (data: {
-    title: string;
-    type: UploadType;
-    content: string;
-    folderId: string;
-    newFolderName?: string;
-  }) => Promise<void>;
-  onCreateFolder?: (name: string) => string; // returns new folder id
 }
 
 const uploadOptions = [
@@ -63,9 +57,10 @@ export function UploadModal({
   onOpenChange,
   folders,
   defaultFolderId,
-  onUpload,
-  onCreateFolder,
 }: UploadModalProps) {
+  const { createMeeting, createFolder, generateSummary } = useFolders();
+  const { toast } = useToast();
+
   const [title, setTitle] = useState("");
   const [selectedType, setSelectedType] = useState<UploadType | null>(null);
   const [content, setContent] = useState("");
@@ -93,10 +88,8 @@ export function UploadModal({
 
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
-    if (onCreateFolder) {
-      const id = onCreateFolder(newFolderName.trim());
-      setFolderId(id);
-    }
+    const id = createFolder(newFolderName.trim());
+    setFolderId(id);
     setIsCreatingFolder(false);
     setNewFolderName("");
   };
@@ -118,18 +111,53 @@ export function UploadModal({
       setError("Please select or create a folder.");
       return;
     }
+    if (selectedType === "text" && !content.trim()) {
+      setError("Please paste your transcript.");
+      return;
+    }
 
     setError(null);
     setIsUploading(true);
 
     try {
-      await onUpload?.({
+      // If user created a new folder inline, create it now
+      let targetFolderId = folderId;
+      if (!folderId && newFolderName.trim()) {
+        targetFolderId = createFolder(newFolderName.trim());
+      }
+
+      // Create meeting with placeholder summary (will be replaced by AI)
+      const meetingId = createMeeting({
         title: title.trim(),
-        type: selectedType,
-        content,
-        folderId: folderId || "new",
-        newFolderName: folderId ? undefined : newFolderName.trim(),
+        folderId: targetFolderId,
+        isStarred: false,
+        isUrgent: false,
+        transcript: content,
+        summary: null, // Will be generated
+        sourceType: selectedType,
       });
+
+      toast({
+        title: "Processing...",
+        description: "Generating AI summary for your meeting.",
+      });
+
+      // Generate AI summary
+      try {
+        await generateSummary(meetingId, content);
+        toast({
+          title: "Meeting created",
+          description: `"${title}" has been saved with AI summary.`,
+        });
+      } catch (summaryError) {
+        console.error("Summary generation failed:", summaryError);
+        toast({
+          title: "Meeting saved",
+          description: `Meeting saved but summary generation failed. You can regenerate it later.`,
+          variant: "destructive",
+        });
+      }
+
       handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create meeting.");

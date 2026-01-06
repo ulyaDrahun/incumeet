@@ -10,12 +10,14 @@ import {
   Share2,
   LayoutGrid,
   LayoutList,
+  Pencil,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MeetingCard } from "@/components/dashboard/MeetingCard";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { ShareFolderModal } from "@/components/folder/ShareFolderModal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,136 +26,77 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import type { Folder, Meeting } from "@/types";
-
-const mockFolder: Folder = {
-  id: "1",
-  name: "Team Meetings",
-  parentId: null,
-  isStarred: true,
-  isUrgent: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  meetingCount: 3,
-};
-
-const mockMeetings: Meeting[] = [
-  {
-    id: "1",
-    title: "Q4 Planning Session",
-    folderId: "1",
-    isStarred: true,
-    isUrgent: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30),
-    updatedAt: new Date(),
-    transcript: "",
-    summary: {
-      shortSummary:
-        "Discussed Q4 goals including 20% revenue growth and new product launch timeline.",
-      keyDecisions: [],
-      actionItems: [],
-    },
-    sourceType: "text",
-  },
-  {
-    id: "2",
-    title: "Weekly Engineering Sync",
-    folderId: "1",
-    isStarred: false,
-    isUrgent: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    updatedAt: new Date(),
-    transcript: "",
-    summary: {
-      shortSummary:
-        "Sprint review and backlog grooming. Addressed tech debt and deployment schedule.",
-      keyDecisions: [],
-      actionItems: [],
-    },
-    sourceType: "audio",
-  },
-  {
-    id: "3",
-    title: "Product Roadmap Review",
-    folderId: "1",
-    isStarred: false,
-    isUrgent: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    updatedAt: new Date(),
-    transcript: "",
-    summary: {
-      shortSummary:
-        "Reviewed upcoming features and prioritized based on customer feedback.",
-      keyDecisions: [],
-      actionItems: [],
-    },
-    sourceType: "video",
-  },
-];
+import { useFolders } from "@/contexts/FoldersContext";
 
 export default function FolderView() {
   const { id } = useParams();
-  const [folder, setFolder] = useState<Folder>(mockFolder);
-  const [meetings, setMeetings] = useState<Meeting[]>(mockMeetings);
+  const { toast } = useToast();
+  const {
+    folders,
+    getFolderById,
+    getMeetingsByFolder,
+    toggleFolderStar,
+    toggleFolderUrgent,
+    updateFolder,
+    deleteFolder,
+    toggleMeetingStar,
+    toggleMeetingUrgent,
+    updateMeeting,
+    deleteMeeting,
+  } = useFolders();
+
+  const folder = getFolderById(id || "");
+  const meetings = getMeetingsByFolder(id || "");
+
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(folder?.name || "");
 
-  const toggleStar = () => setFolder({ ...folder, isStarred: !folder.isStarred });
-  const toggleUrgent = () => setFolder({ ...folder, isUrgent: !folder.isUrgent });
+  if (!folder) {
+    return (
+      <AppLayout>
+        <div className="p-6 md:p-8 max-w-7xl mx-auto">
+          <p className="text-muted-foreground">Folder not found.</p>
+          <Link to="/dashboard" className="text-primary hover:underline">
+            Back to Dashboard
+          </Link>
+        </div>
+      </AppLayout>
+    );
+  }
 
   // Sort newest first
   const sortedMeetings = [...meetings].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  // Meeting CRUD helpers
-  const handleMeetingStar = (mid: string) =>
-    setMeetings((prev) => prev.map((m) => (m.id === mid ? { ...m, isStarred: !m.isStarred } : m)));
+  const toggleStar = () => toggleFolderStar(folder.id);
+  const toggleUrgent = () => toggleFolderUrgent(folder.id);
 
-  const handleMeetingUrgent = (mid: string) =>
-    setMeetings((prev) => prev.map((m) => (m.id === mid ? { ...m, isUrgent: !m.isUrgent } : m)));
+  const commitRename = () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== folder.name) {
+      updateFolder(folder.id, { name: trimmed });
+    } else {
+      setEditName(folder.name);
+    }
+    setIsEditing(false);
+  };
 
-  const handleMeetingRename = (mid: string, title: string) =>
-    setMeetings((prev) => prev.map((m) => (m.id === mid ? { ...m, title } : m)));
-
-  const handleMeetingDelete = (mid: string) =>
-    setMeetings((prev) => prev.filter((m) => m.id !== mid));
-
-  // Upload handler (mock AI)
-  const handleUpload = async (data: {
-    title: string;
-    type: "text" | "audio" | "video";
-    content: string;
-    folderId: string;
-    newFolderName?: string;
-  }) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    const newMeeting: Meeting = {
-      id: crypto.randomUUID(),
-      title: data.title,
-      folderId: id || "1",
-      isStarred: false,
-      isUrgent: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      transcript: data.content,
-      summary: {
-        shortSummary: "AI-generated summary placeholder. Enable Cloud for real AI.",
-        keyDecisions: ["Decision placeholder"],
-        actionItems: ["Action placeholder"],
-      },
-      sourceType: data.type,
-    };
-    setMeetings((prev) => [newMeeting, ...prev]);
-    setFolder((f) => ({ ...f, meetingCount: f.meetingCount + 1 }));
-    toast({ title: "Meeting created", description: `"${data.title}" saved.` });
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitRename();
+    } else if (e.key === "Escape") {
+      setEditName(folder.name);
+      setIsEditing(false);
+    }
   };
 
   // Sharing handler
   const handleShare = async (email: string, permission: "view" | "edit") => {
-    // In a real app, this would call your backend
     await new Promise((r) => setTimeout(r, 1000));
     toast({
       title: "Invite sent",
@@ -175,15 +118,35 @@ export default function FolderView() {
           </Link>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-                {folder.name}
-                {folder.isStarred && <Star className="h-6 w-6 fill-starred text-starred" />}
-                {folder.isUrgent && <AlertTriangle className="h-6 w-6 fill-urgent text-urgent" />}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                {folder.meetingCount} meeting{folder.meetingCount !== 1 ? "s" : ""}
-              </p>
+            <div className="flex items-center gap-3">
+              {isEditing ? (
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={handleKeyDown}
+                  className="text-2xl md:text-3xl font-bold h-auto py-1 max-w-xs"
+                  autoFocus
+                />
+              ) : (
+                <>
+                  <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                    {folder.name}
+                    {folder.isStarred && <Star className="h-6 w-6 fill-starred text-starred" />}
+                    {folder.isUrgent && <AlertTriangle className="h-6 w-6 fill-urgent text-urgent" />}
+                  </h1>
+                  <button
+                    onClick={() => {
+                      setEditName(folder.name);
+                      setIsEditing(true);
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Rename folder"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant={folder.isStarred ? "secondary" : "outline"} size="sm" onClick={toggleStar}>
@@ -203,10 +166,20 @@ export default function FolderView() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Rename</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setEditName(folder.name);
+                    setIsEditing(true);
+                  }}>
+                    Rename
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Move</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => deleteFolder(folder.id)}
+                  >
+                    Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button onClick={() => setUploadModalOpen(true)}>
@@ -215,6 +188,9 @@ export default function FolderView() {
               </Button>
             </div>
           </div>
+          <p className="text-muted-foreground mt-1">
+            {folder.meetingCount} meeting{folder.meetingCount !== 1 ? "s" : ""}
+          </p>
         </motion.div>
 
         {/* View toggle */}
@@ -247,10 +223,10 @@ export default function FolderView() {
                     key={meeting.id}
                     meeting={meeting}
                     variant="list"
-                    onStar={handleMeetingStar}
-                    onUrgent={handleMeetingUrgent}
-                    onRename={handleMeetingRename}
-                    onDelete={handleMeetingDelete}
+                    onStar={toggleMeetingStar}
+                    onUrgent={toggleMeetingUrgent}
+                    onRename={(id, title) => updateMeeting(id, { title })}
+                    onDelete={deleteMeeting}
                   />
                 ))}
               </div>
@@ -260,10 +236,10 @@ export default function FolderView() {
                   <MeetingCard
                     key={meeting.id}
                     meeting={meeting}
-                    onStar={handleMeetingStar}
-                    onUrgent={handleMeetingUrgent}
-                    onRename={handleMeetingRename}
-                    onDelete={handleMeetingDelete}
+                    onStar={toggleMeetingStar}
+                    onUrgent={toggleMeetingUrgent}
+                    onRename={(id, title) => updateMeeting(id, { title })}
+                    onDelete={deleteMeeting}
                   />
                 ))}
               </div>
@@ -287,9 +263,8 @@ export default function FolderView() {
       <UploadModal
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
-        folders={[folder]}
+        folders={folders}
         defaultFolderId={folder.id}
-        onUpload={handleUpload}
       />
 
       <ShareFolderModal

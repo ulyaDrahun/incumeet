@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -10,87 +10,79 @@ import {
   Edit3,
   Check,
   X,
+  Loader2,
+  RefreshCw,
+  Pencil,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import type { Meeting, MeetingSummary } from "@/types";
-
-const mockMeeting: Meeting = {
-  id: "1",
-  title: "Q4 Planning Session",
-  folderId: "1",
-  isStarred: true,
-  isUrgent: false,
-  createdAt: new Date(Date.now() - 1000 * 60 * 30),
-  updatedAt: new Date(),
-  transcript: `John: Good morning everyone, let's get started with our Q4 planning session.
-
-Sarah: Thanks John. I've prepared the revenue projections for Q4. We're looking at a potential 20% growth if we hit our targets.
-
-John: That's ambitious but achievable. What about the product roadmap?
-
-Mike: We're planning to launch the new analytics dashboard by mid-November. The beta testing is going well.
-
-Sarah: That should definitely help with enterprise sales. The dashboard was the most requested feature.
-
-John: Let's make sure we have enough support resources ready for the launch.
-
-Mike: Already on it. We're bringing in two additional support engineers.
-
-John: Perfect. Any blockers we should address?
-
-Sarah: The only concern is the holiday season. We might see slower response times from prospects.
-
-John: Good point. Let's front-load our outreach efforts. Anything else?
-
-Mike: I think we're in good shape. Let's sync again next week to review progress.
-
-John: Sounds good. Meeting adjourned.`,
-  summary: {
-    shortSummary:
-      "The team discussed Q4 planning with a focus on achieving 20% revenue growth. Key initiatives include launching the analytics dashboard by mid-November and preparing for the holiday season impact on sales cycles.",
-    keyDecisions: [
-      "Target 20% revenue growth for Q4",
-      "Launch analytics dashboard by mid-November",
-      "Hire two additional support engineers for launch",
-      "Front-load outreach efforts before holiday season",
-    ],
-    actionItems: [
-      "Sarah to finalize revenue projections and share with team",
-      "Mike to complete beta testing for analytics dashboard",
-      "Mike to onboard new support engineers before launch",
-      "Sales team to accelerate outreach before holidays",
-      "Schedule follow-up sync for next week",
-    ],
-  },
-  sourceType: "text",
-};
+import { useToast } from "@/hooks/use-toast";
+import { useFolders } from "@/contexts/FoldersContext";
+import type { MeetingSummary } from "@/types";
 
 export default function MeetingDetail() {
   const { id } = useParams();
-  const [meeting, setMeeting] = useState<Meeting>(mockMeeting);
+  const { toast } = useToast();
+  const {
+    getMeetingById,
+    getFolderById,
+    updateMeeting,
+    toggleMeetingStar,
+    toggleMeetingUrgent,
+    generateSummary,
+  } = useFolders();
+
+  const meeting = getMeetingById(id || "");
+  const folder = meeting ? getFolderById(meeting.folderId) : undefined;
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedSummary, setEditedSummary] = useState<MeetingSummary | null>(
-    meeting.summary
+    meeting?.summary || null
   );
   const [showTranscript, setShowTranscript] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [emailSubject, setEmailSubject] = useState(
-    `Meeting Summary: ${meeting.title}`
+    `Meeting Summary: ${meeting?.title || ""}`
   );
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState(meeting?.title || "");
+
+  useEffect(() => {
+    if (meeting?.summary) {
+      setEditedSummary(meeting.summary);
+    }
+    if (meeting?.title) {
+      setEditTitle(meeting.title);
+      setEmailSubject(`Meeting Summary: ${meeting.title}`);
+    }
+  }, [meeting?.summary, meeting?.title]);
+
+  if (!meeting) {
+    return (
+      <AppLayout>
+        <div className="p-6 md:p-8 max-w-4xl mx-auto">
+          <p className="text-muted-foreground">Meeting not found.</p>
+          <Link to="/dashboard" className="text-primary hover:underline">
+            Back to Dashboard
+          </Link>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const handleSave = () => {
     if (editedSummary) {
-      setMeeting({ ...meeting, summary: editedSummary });
+      updateMeeting(meeting.id, { summary: editedSummary });
     }
     setIsEditing(false);
   };
@@ -101,11 +93,60 @@ export default function MeetingDetail() {
   };
 
   const toggleStar = () => {
-    setMeeting({ ...meeting, isStarred: !meeting.isStarred });
+    toggleMeetingStar(meeting.id);
   };
 
   const toggleUrgent = () => {
-    setMeeting({ ...meeting, isUrgent: !meeting.isUrgent });
+    toggleMeetingUrgent(meeting.id);
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!meeting.transcript || meeting.transcript.trim().length === 0) {
+      toast({
+        title: "No transcript",
+        description: "Please add a transcript first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      await generateSummary(meeting.id, meeting.transcript);
+      toast({
+        title: "Summary generated",
+        description: "Your meeting summary is ready.",
+      });
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      toast({
+        title: "Failed to generate summary",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const commitTitleRename = () => {
+    const trimmed = editTitle.trim();
+    if (trimmed && trimmed !== meeting.title) {
+      updateMeeting(meeting.id, { title: trimmed });
+    } else {
+      setEditTitle(meeting.title);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitTitleRename();
+    } else if (e.key === "Escape") {
+      setEditTitle(meeting.title);
+      setIsEditingTitle(false);
+    }
   };
 
   const generateEmailBody = () => {
@@ -126,6 +167,9 @@ ${meeting.summary.actionItems.map((a) => `• ${a}`).join("\n")}
 Best regards`;
   };
 
+  const backLink = folder ? `/folder/${folder.id}` : "/dashboard";
+  const backLabel = folder ? `Back to ${folder.name}` : "Back to Dashboard";
+
   return (
     <AppLayout>
       <div className="p-6 md:p-8 max-w-4xl mx-auto">
@@ -136,32 +180,47 @@ Best regards`;
           className="mb-8"
         >
           <Link
-            to="/dashboard"
+            to={backLink}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            {backLabel}
           </Link>
 
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-                {meeting.title}
-                {meeting.isStarred && (
-                  <Star className="h-6 w-6 fill-starred text-starred" />
-                )}
-                {meeting.isUrgent && (
-                  <AlertTriangle className="h-6 w-6 text-urgent" />
-                )}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Created {meeting.createdAt.toLocaleDateString()} •{" "}
-                {meeting.sourceType === "text"
-                  ? "Text transcript"
-                  : meeting.sourceType === "audio"
-                  ? "Audio recording"
-                  : "Video"}
-              </p>
+            <div className="flex items-center gap-3">
+              {isEditingTitle ? (
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={commitTitleRename}
+                  onKeyDown={handleTitleKeyDown}
+                  className="text-2xl md:text-3xl font-bold h-auto py-1 max-w-md"
+                  autoFocus
+                />
+              ) : (
+                <>
+                  <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                    {meeting.title}
+                    {meeting.isStarred && (
+                      <Star className="h-6 w-6 fill-starred text-starred" />
+                    )}
+                    {meeting.isUrgent && (
+                      <AlertTriangle className="h-6 w-6 text-urgent" />
+                    )}
+                  </h1>
+                  <button
+                    onClick={() => {
+                      setEditTitle(meeting.title);
+                      setIsEditingTitle(true);
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Rename meeting"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -196,10 +255,18 @@ Best regards`;
               </Button>
             </div>
           </div>
+          <p className="text-muted-foreground mt-1">
+            Created {meeting.createdAt.toLocaleDateString()} •{" "}
+            {meeting.sourceType === "text"
+              ? "Text transcript"
+              : meeting.sourceType === "audio"
+              ? "Audio recording"
+              : "Video"}
+          </p>
         </motion.div>
 
         {/* Summary Section */}
-        {meeting.summary && (
+        {meeting.summary ? (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -208,6 +275,19 @@ Best regards`;
           >
             {/* Edit Toggle */}
             <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateSummary}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Regenerate
+              </Button>
               {isEditing ? (
                 <>
                   <Button variant="ghost" size="sm" onClick={handleCancel}>
@@ -306,6 +386,28 @@ Best regards`;
               )}
             </div>
           </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-card rounded-xl border border-border p-8 shadow-card text-center"
+          >
+            <h2 className="text-lg font-semibold mb-2">No Summary Yet</h2>
+            <p className="text-muted-foreground mb-4">
+              Generate an AI summary from your transcript.
+            </p>
+            <Button onClick={handleGenerateSummary} disabled={isGenerating}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Summary"
+              )}
+            </Button>
+          </motion.div>
         )}
       </div>
 
@@ -317,7 +419,7 @@ Best regards`;
           </DialogHeader>
           <div className="prose prose-sm max-w-none">
             <pre className="whitespace-pre-wrap text-sm font-sans text-muted-foreground bg-muted p-4 rounded-lg">
-              {meeting.transcript}
+              {meeting.transcript || "No transcript available."}
             </pre>
           </div>
         </DialogContent>
@@ -362,7 +464,6 @@ Best regards`;
               </Button>
               <Button
                 onClick={() => {
-                  // In a real app, this would send the email
                   setShowEmailModal(false);
                 }}
               >
