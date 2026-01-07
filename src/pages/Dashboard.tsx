@@ -16,11 +16,11 @@ export default function Dashboard() {
     meetings,
     createFolder,
     toggleFolderStar,
-    toggleFolderUrgent,
+    toggleFolderPinned,
     updateFolder,
     deleteFolder,
     toggleMeetingStar,
-    toggleMeetingUrgent,
+    toggleMeetingPinned,
     updateMeeting,
     deleteMeeting,
   } = useFolders();
@@ -28,15 +28,28 @@ export default function Dashboard() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Sort folders and meetings with pinned items first
+  const sortedFolders = [...folders].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return 0;
+  });
+
+  const sortedMeetings = [...meetings].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return 0;
+  });
+
   const stats = {
     folderCount: folders.length,
     meetingCount: meetings.length,
     starredCount:
       folders.filter((f) => f.isStarred).length +
       meetings.filter((m) => m.isStarred).length,
-    urgentCount:
-      folders.filter((f) => f.isUrgent).length +
-      meetings.filter((m) => m.isUrgent).length,
+    pinnedCount:
+      folders.filter((f) => f.isPinned).length +
+      meetings.filter((m) => m.isPinned).length,
   };
 
   const handleNewFolderClick = () => {
@@ -105,12 +118,12 @@ export default function Dashboard() {
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {folders.map((folder) => (
+            {sortedFolders.map((folder) => (
               <FolderCard
                 key={folder.id}
                 folder={folder}
                 onStar={toggleFolderStar}
-                onUrgent={toggleFolderUrgent}
+                onPin={toggleFolderPinned}
                 onRename={(id, name) => updateFolder(id, { name })}
                 onDelete={deleteFolder}
               />
@@ -128,12 +141,12 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold">Recent Meetings</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {meetings.map((meeting) => (
+            {sortedMeetings.map((meeting) => (
               <MeetingCard
                 key={meeting.id}
                 meeting={meeting}
                 onStar={toggleMeetingStar}
-                onUrgent={toggleMeetingUrgent}
+                onPin={toggleMeetingPinned}
                 onRename={(id, title) => updateMeeting(id, { title })}
                 onDelete={deleteMeeting}
               />

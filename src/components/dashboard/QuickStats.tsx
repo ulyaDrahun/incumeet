@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Folder, FileText, Star, AlertTriangle } from "lucide-react";
+import { Folder, FileText, Star, Pin } from "lucide-react";
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -34,14 +34,14 @@ interface QuickStatsProps {
   folderCount: number;
   meetingCount: number;
   starredCount: number;
-  urgentCount: number;
+  pinnedCount: number;
 }
 
 export function QuickStats({
   folderCount,
   meetingCount,
   starredCount,
-  urgentCount,
+  pinnedCount,
 }: QuickStatsProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -64,10 +64,10 @@ export function QuickStats({
         color="bg-starred/10"
       />
       <StatCard
-        icon={<AlertTriangle className="h-5 w-5 text-urgent" />}
-        label="Urgent"
-        value={urgentCount}
-        color="bg-urgent/10"
+        icon={<Pin className="h-5 w-5 text-pinned" />}
+        label="Pinned"
+        value={pinnedCount}
+        color="bg-pinned/10"
       />
     </div>
   );
