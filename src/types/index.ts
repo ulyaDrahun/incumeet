@@ -25,16 +25,29 @@ export interface Meeting {
   isPinned: boolean;
   createdAt: Date;
   updatedAt: Date;
+  meetingDate: Date;
   transcript: string;
   summary: MeetingSummary | null;
   sourceType: 'text' | 'audio' | 'video';
   order: number;
 }
 
+export interface ActionItemByPerson {
+  person: string;
+  items: string[];
+}
+
 export interface MeetingSummary {
   shortSummary: string;
   keyDecisions: string[];
-  actionItems: string[];
+  actionItems: ActionItemByPerson[];
+}
+
+export interface CalendarNote {
+  id: string;
+  date: Date;
+  content: string;
+  meetingId?: string;
 }
 
 export interface EmailDraft {

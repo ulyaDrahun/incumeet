@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Plus, Star, Pin, MoreHorizontal, Share2, LayoutGrid, LayoutList, Pencil } from "lucide-react";
@@ -6,16 +6,18 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { MeetingCard } from "@/components/dashboard/MeetingCard";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { ShareFolderModal } from "@/components/folder/ShareFolderModal";
+import { FolderSearch } from "@/components/folder/FolderSearch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useFolders } from "@/contexts/FoldersContext";
+import { format, parse, isValid } from "date-fns";
 
 export default function FolderView() {
   const { id } = useParams();
   const { toast } = useToast();
-  const { folders, getFolderById, getMeetingsByFolder, toggleFolderStar, toggleFolderPinned, updateFolder, deleteFolder, toggleMeetingStar, toggleMeetingPinned, updateMeeting, deleteMeeting } = useFolders();
+  const { folders, getFolderById, getMeetingsByFolder, getActualMeetingCount, toggleFolderStar, toggleFolderPinned, updateFolder, deleteFolder, toggleMeetingStar, toggleMeetingPinned, updateMeeting, deleteMeeting } = useFolders();
 
   const folder = getFolderById(id || "");
   const meetings = getMeetingsByFolder(id || "");
@@ -25,7 +27,57 @@ export default function FolderView() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder?.name || "");
+  const [searchQuery, setSearchQuery] = useState("");
 
+  // Filter meetings based on search query
+  const filteredMeetings = useMemo(() => {
+    if (!searchQuery.trim()) return meetings;
+    
+    const query = searchQuery.toLowerCase().trim();
+    
+    return meetings.filter((meeting) => {
+      // Check meeting title
+      if (meeting.title.toLowerCase().includes(query)) return true;
+      
+      // Check meeting date - try various date formats
+      const meetingDateStr = format(meeting.meetingDate, "MMM d").toLowerCase();
+      const meetingDateFull = format(meeting.meetingDate, "MMMM d, yyyy").toLowerCase();
+      const createdDateStr = format(meeting.createdAt, "MMM d").toLowerCase();
+      const createdDateFull = format(meeting.createdAt, "MMMM d, yyyy").toLowerCase();
+      
+      if (meetingDateStr.includes(query) || meetingDateFull.includes(query)) return true;
+      if (createdDateStr.includes(query) || createdDateFull.includes(query)) return true;
+      
+      // Try to parse the query as a date
+      const dateFormats = ["MMM d", "MMMM d", "MMM dd", "MMMM dd", "M/d", "MM/dd"];
+      for (const fmt of dateFormats) {
+        try {
+          const parsedDate = parse(query, fmt, new Date());
+          if (isValid(parsedDate)) {
+            const month = parsedDate.getMonth();
+            const day = parsedDate.getDate();
+            const meetingMonth = meeting.meetingDate.getMonth();
+            const meetingDay = meeting.meetingDate.getDate();
+            if (month === meetingMonth && day === meetingDay) return true;
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+      
+      return false;
+    });
+  }, [meetings, searchQuery]);
+
+  const sortedMeetings = useMemo(() => {
+    return [...filteredMeetings].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [filteredMeetings]);
+
+  // Early return after all hooks
   if (!folder) {
     return (
       <AppLayout>
@@ -37,11 +89,7 @@ export default function FolderView() {
     );
   }
 
-  const sortedMeetings = [...meetings].sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const actualCount = getActualMeetingCount(folder.id);
 
   const toggleStar = () => toggleFolderStar(folder.id);
   const togglePin = () => toggleFolderPinned(folder.id);
@@ -107,12 +155,24 @@ export default function FolderView() {
               <Button onClick={() => setUploadModalOpen(true)}><Plus className="h-4 w-4" />New Meeting</Button>
             </div>
           </div>
-          <p className="text-muted-foreground mt-1">{folder.meetingCount} meeting{folder.meetingCount !== 1 ? "s" : ""}</p>
+          <p className="text-muted-foreground mt-1">{actualCount} meeting{actualCount !== 1 ? "s" : ""}</p>
         </motion.div>
 
-        <div className="flex items-center justify-end gap-2 mb-4">
-          <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon-sm" onClick={() => setViewMode("list")} aria-label="List view"><LayoutList className="h-4 w-4" /></Button>
-          <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon-sm" onClick={() => setViewMode("grid")} aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></Button>
+        {/* Search Bar */}
+        <div className="mb-6">
+          <FolderSearch value={searchQuery} onChange={setSearchQuery} />
+        </div>
+
+        <div className="flex items-center justify-between gap-4 mb-4">
+          {searchQuery && (
+            <p className="text-sm text-muted-foreground">
+              Found {filteredMeetings.length} meeting{filteredMeetings.length !== 1 ? "s" : ""} matching "{searchQuery}"
+            </p>
+          )}
+          <div className="flex items-center gap-2 ml-auto">
+            <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon-sm" onClick={() => setViewMode("list")} aria-label="List view"><LayoutList className="h-4 w-4" /></Button>
+            <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon-sm" onClick={() => setViewMode("grid")} aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></Button>
+          </div>
         </div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -130,6 +190,10 @@ export default function FolderView() {
                 ))}
               </div>
             )
+          ) : searchQuery ? (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground">No meetings found matching "{searchQuery}"</p>
+            </div>
           ) : (
             <div className="text-center py-16">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4"><Plus className="h-8 w-8 text-muted-foreground" /></div>

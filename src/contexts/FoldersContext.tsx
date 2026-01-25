@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import type { Folder, Meeting, MeetingSummary } from "@/types";
+import type { Folder, Meeting, MeetingSummary, CalendarNote } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
 // Initial mock data
@@ -59,12 +59,16 @@ const initialMeetings: Meeting[] = [
     isPinned: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 30),
     updatedAt: new Date(),
+    meetingDate: new Date(Date.now() - 1000 * 60 * 30),
     transcript: "",
     summary: {
       shortSummary:
         "Discussed Q4 goals including 20% revenue growth and new product launch timeline. Team aligned on priorities.",
       keyDecisions: [],
-      actionItems: [],
+      actionItems: [
+        { person: "John", items: ["Finalize budget proposal", "Schedule review meeting"] },
+        { person: "Sarah", items: ["Draft marketing plan", "Contact vendors"] },
+      ],
     },
     sourceType: "text",
     order: 0,
@@ -77,12 +81,15 @@ const initialMeetings: Meeting[] = [
     isPinned: true,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
     updatedAt: new Date(),
+    meetingDate: new Date(Date.now() - 1000 * 60 * 60 * 2),
     transcript: "",
     summary: {
       shortSummary:
         "Onboarding call with Acme Corp. Covered integration requirements and timeline expectations.",
       keyDecisions: [],
-      actionItems: [],
+      actionItems: [
+        { person: "Mike", items: ["Send API documentation", "Set up staging environment"] },
+      ],
     },
     sourceType: "audio",
     order: 0,
@@ -95,12 +102,16 @@ const initialMeetings: Meeting[] = [
     isPinned: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
     updatedAt: new Date(),
+    meetingDate: new Date(Date.now() - 1000 * 60 * 60 * 24),
     transcript: "",
     summary: {
       shortSummary:
         "Sprint review and backlog grooming. Addressed tech debt items and deployment schedule.",
       keyDecisions: [],
-      actionItems: [],
+      actionItems: [
+        { person: "Emma", items: ["Update Jira tickets", "Review PRs"] },
+        { person: "David", items: ["Deploy to staging", "Run integration tests"] },
+      ],
     },
     sourceType: "video",
     order: 1,
@@ -110,6 +121,7 @@ const initialMeetings: Meeting[] = [
 interface FoldersContextType {
   folders: Folder[];
   meetings: Meeting[];
+  calendarNotes: CalendarNote[];
   createFolder: (name: string, parentId?: string | null) => string;
   updateFolder: (id: string, updates: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
@@ -127,6 +139,9 @@ interface FoldersContextType {
   getMeetingById: (id: string) => Meeting | undefined;
   getSubfolders: (parentId: string | null) => Folder[];
   generateSummary: (meetingId: string, transcript: string) => Promise<void>;
+  getActualMeetingCount: (folderId: string) => number;
+  addCalendarNote: (date: Date, content: string) => void;
+  addMeetingFromCalendar: (date: Date, title: string, folderId: string) => string;
 }
 
 const FoldersContext = createContext<FoldersContextType | undefined>(undefined);
@@ -134,6 +149,7 @@ const FoldersContext = createContext<FoldersContextType | undefined>(undefined);
 export function FoldersProvider({ children }: { children: ReactNode }) {
   const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [meetings, setMeetings] = useState<Meeting[]>(initialMeetings);
+  const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
 
   const createFolder = (name: string, parentId: string | null = null): string => {
     const id = crypto.randomUUID();
@@ -272,6 +288,32 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
     return folders.filter((f) => f.parentId === parentId);
   };
 
+  const getActualMeetingCount = (folderId: string): number => {
+    return meetings.filter((m) => m.folderId === folderId).length;
+  };
+
+  const addCalendarNote = (date: Date, content: string) => {
+    const note: CalendarNote = {
+      id: crypto.randomUUID(),
+      date,
+      content,
+    };
+    setCalendarNotes((prev) => [...prev, note]);
+  };
+
+  const addMeetingFromCalendar = (date: Date, title: string, folderId: string): string => {
+    return createMeeting({
+      title,
+      folderId,
+      isStarred: false,
+      isPinned: false,
+      meetingDate: date,
+      transcript: "",
+      summary: null,
+      sourceType: "text",
+    });
+  };
+
   const generateSummary = async (meetingId: string, transcript: string): Promise<void> => {
     const { data, error } = await supabase.functions.invoke("summarize-meeting", {
       body: { transcript },
@@ -296,6 +338,7 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
       value={{
         folders,
         meetings,
+        calendarNotes,
         createFolder,
         updateFolder,
         deleteFolder,
@@ -313,6 +356,9 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
         getMeetingById,
         getSubfolders,
         generateSummary,
+        getActualMeetingCount,
+        addCalendarNote,
+        addMeetingFromCalendar,
       }}
     >
       {children}
