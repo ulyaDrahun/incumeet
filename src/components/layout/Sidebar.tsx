@@ -24,13 +24,14 @@ import {
   Folder,
   FolderPlus,
   Home,
-  Star,
+  Calendar,
   Pin,
   Settings,
   LogOut,
   ChevronRight,
   ChevronDown,
   GripVertical,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,7 @@ interface SortableFolderItemProps {
   hasSubfolders?: boolean;
   onToggleExpand?: () => void;
   depth?: number;
+  actualMeetingCount: number;
 }
 
 function SortableFolderItem({
@@ -81,6 +83,7 @@ function SortableFolderItem({
   hasSubfolders,
   onToggleExpand,
   depth = 0,
+  actualMeetingCount,
 }: SortableFolderItemProps) {
   const {
     attributes,
@@ -144,7 +147,7 @@ function SortableFolderItem({
             )}
           </div>
           <span className="text-xs text-muted-foreground ml-1">
-            {folder.meetingCount}
+            {actualMeetingCount}
           </span>
         </motion.div>
       </Link>
@@ -163,7 +166,7 @@ function FolderItemOverlay({ folder }: { folder: FolderType }) {
 
 export function Sidebar() {
   const location = useLocation();
-  const { folders, createFolder, reorderFolders, moveFolderIntoFolder, getSubfolders } = useFolders();
+  const { folders, createFolder, reorderFolders, moveFolderIntoFolder, getSubfolders, getActualMeetingCount } = useFolders();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [activeFolder, setActiveFolder] = useState<FolderType | null>(null);
 
@@ -239,6 +242,7 @@ export function Sidebar() {
             hasSubfolders={hasSubfolders}
             onToggleExpand={() => toggleExpand(folder.id)}
             depth={depth}
+            actualMeetingCount={getActualMeetingCount(folder.id)}
           />
           <AnimatePresence>
             {isExpanded && hasSubfolders && (
@@ -277,10 +281,10 @@ export function Sidebar() {
           isActive={location.pathname === "/dashboard"}
         />
         <SidebarItem
-          icon={<Star className="h-4 w-4" />}
-          label="Starred"
-          href="/starred"
-          isActive={location.pathname === "/starred"}
+          icon={<Calendar className="h-4 w-4" />}
+          label="Calendar"
+          href="/calendar"
+          isActive={location.pathname === "/calendar"}
         />
         <SidebarItem
           icon={<Pin className="h-4 w-4" />}

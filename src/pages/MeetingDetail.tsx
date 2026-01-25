@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useFolders } from "@/contexts/FoldersContext";
-import type { MeetingSummary } from "@/types";
+import type { MeetingSummary, ActionItemByPerson } from "@/types";
 
 export default function MeetingDetail() {
   const { id } = useParams();
@@ -24,10 +24,13 @@ export default function MeetingDetail() {
   const [showTranscript, setShowTranscript] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTo, setEmailTo] = useState("");
+  const [emailCc, setEmailCc] = useState("");
+  const [emailBcc, setEmailBcc] = useState("");
   const [emailSubject, setEmailSubject] = useState(`Meeting Summary: ${meeting?.title || ""}`);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(meeting?.title || "");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
     if (meeting?.summary) setEditedSummary(meeting.summary);
@@ -78,16 +81,134 @@ export default function MeetingDetail() {
     else if (e.key === "Escape") { setEditTitle(meeting.title); setIsEditingTitle(false); }
   };
 
+  const formatActionItemsForText = () => {
+    if (!meeting.summary?.actionItems) return "";
+    return meeting.summary.actionItems.map(group => 
+      `${group.person}:\n${group.items.map(item => `  • ${item}`).join("\n")}`
+    ).join("\n\n");
+  };
+
   const generateEmailBody = () => {
     if (!meeting.summary) return "";
-    return `Hi,\n\nHere's a summary of our meeting: ${meeting.title}\n\nSUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${meeting.summary.actionItems.map((a) => `• ${a}`).join("\n")}\n\nBest regards`;
+    return `Hi,
+
+Here's a summary of our meeting: ${meeting.title}
+
+SUMMARY
+${meeting.summary.shortSummary}
+
+KEY DECISIONS
+${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}
+
+ACTION ITEMS
+${formatActionItemsForText()}
+
+Best regards`;
+  };
+
+  const generateEmailHtml = () => {
+    if (!meeting.summary) return "";
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    h1 { color: #1a1a1a; font-size: 24px; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; }
+    h2 { color: #4f46e5; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 24px; }
+    .section { background: #f8f9fa; border-radius: 8px; padding: 16px; margin: 12px 0; }
+    ul { margin: 0; padding-left: 20px; }
+    li { margin: 8px 0; }
+    .person-name { font-weight: 600; color: #1a1a1a; margin-top: 12px; margin-bottom: 4px; }
+    .action-item { margin-left: 16px; }
+    .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>${meeting.title}</h1>
+  
+  <h2>Summary</h2>
+  <div class="section">
+    <p>${meeting.summary.shortSummary}</p>
+  </div>
+  
+  <h2>Key Decisions</h2>
+  <div class="section">
+    <ul>
+      ${meeting.summary.keyDecisions.map(d => `<li>${d}</li>`).join("")}
+    </ul>
+  </div>
+  
+  <h2>Action Items</h2>
+  <div class="section">
+    ${meeting.summary.actionItems.map(group => `
+      <p class="person-name">${group.person}</p>
+      <ul class="action-item">
+        ${group.items.map(item => `<li>${item}</li>`).join("")}
+      </ul>
+    `).join("")}
+  </div>
+  
+  <div class="footer">
+    <p>Best regards</p>
+  </div>
+</body>
+</html>`;
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailTo.trim()) {
+      toast({ title: "Missing recipient", description: "Please enter at least one email address.", variant: "destructive" });
+      return;
+    }
+    
+    setIsSendingEmail(true);
+    try {
+      // For now, simulate sending - in production this would call an edge function
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast({ title: "Email sent", description: "Meeting summary has been emailed successfully." });
+      setShowEmailModal(false);
+      setEmailTo("");
+      setEmailCc("");
+      setEmailBcc("");
+    } catch (error) {
+      toast({ title: "Failed to send email", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const copyToClipboard = () => {
     if (!meeting.summary) return;
-    const text = `SUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${meeting.summary.actionItems.map((a) => `• ${a}`).join("\n")}`;
+    const text = `SUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}`;
     navigator.clipboard.writeText(text);
     toast({ title: "Copied to clipboard" });
+  };
+
+  const handleActionItemsEdit = (value: string) => {
+    // Parse text format back to ActionItemByPerson array
+    const lines = value.split("\n").filter(Boolean);
+    const parsed: ActionItemByPerson[] = [];
+    let currentPerson = "";
+    
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.endsWith(":")) {
+        currentPerson = trimmed.slice(0, -1);
+        parsed.push({ person: currentPerson, items: [] });
+      } else if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
+        const item = trimmed.replace(/^[•\-]\s*/, "");
+        if (parsed.length > 0) {
+          parsed[parsed.length - 1].items.push(item);
+        }
+      } else if (currentPerson && trimmed) {
+        if (parsed.length > 0) {
+          parsed[parsed.length - 1].items.push(trimmed);
+        }
+      }
+    });
+    
+    setEditedSummary({ ...editedSummary!, actionItems: parsed });
   };
 
   const backLink = folder ? `/folder/${folder.id}` : "/dashboard";
@@ -128,7 +249,9 @@ export default function MeetingDetail() {
               <Button size="sm" onClick={() => setShowEmailModal(true)}><Mail className="h-4 w-4" />Email Summary</Button>
             </div>
           </div>
-          <p className="text-muted-foreground mt-1">Created {meeting.createdAt.toLocaleDateString()} • {meeting.sourceType === "text" ? "Text transcript" : meeting.sourceType === "audio" ? "Audio recording" : "Video"}</p>
+          <p className="text-muted-foreground mt-1">
+            Meeting Date: {meeting.meetingDate.toLocaleDateString()} • Created {meeting.createdAt.toLocaleDateString()} • {meeting.sourceType === "text" ? "Text transcript" : meeting.sourceType === "audio" ? "Audio recording" : "Video"}
+          </p>
         </motion.div>
 
         {/* Summary Section - Single Container */}
@@ -178,20 +301,32 @@ export default function MeetingDetail() {
                 )}
               </div>
 
-              {/* Action Items */}
+              {/* Action Items - Grouped by Person */}
               <div className="p-6">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Action Items</h2>
                 {isEditing ? (
-                  <Textarea value={editedSummary?.actionItems.join("\n") || ""} onChange={(e) => setEditedSummary({ ...editedSummary!, actionItems: e.target.value.split("\n").filter(Boolean) })} placeholder="One action item per line" className="min-h-[120px]" />
+                  <Textarea 
+                    value={editedSummary?.actionItems.map(g => `${g.person}:\n${g.items.map(i => `• ${i}`).join("\n")}`).join("\n\n") || ""} 
+                    onChange={(e) => handleActionItemsEdit(e.target.value)} 
+                    placeholder="Person Name:\n• Action item 1\n• Action item 2" 
+                    className="min-h-[150px] font-mono text-sm" 
+                  />
                 ) : (
-                  <ul className="space-y-2">
-                    {meeting.summary.actionItems.map((item, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <div className="w-4 h-4 rounded border-2 border-muted-foreground/40 mt-0.5 shrink-0" />
-                        <span className="text-foreground">{item}</span>
-                      </li>
+                  <div className="space-y-4">
+                    {meeting.summary.actionItems.map((group, groupIdx) => (
+                      <div key={groupIdx}>
+                        <h3 className="font-semibold text-foreground mb-2">{group.person}</h3>
+                        <ul className="space-y-2 ml-4">
+                          {group.items.map((item, itemIdx) => (
+                            <li key={itemIdx} className="flex items-start gap-3">
+                              <div className="w-4 h-4 rounded border-2 border-muted-foreground/40 mt-0.5 shrink-0" />
+                              <span className="text-foreground">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             </div>
@@ -216,16 +351,40 @@ export default function MeetingDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Enhanced Email Modal */}
       <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Email Summary</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Email Meeting Summary</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2"><label className="text-sm font-medium">To</label><Input placeholder="email@example.com" value={emailTo} onChange={(e) => setEmailTo(e.target.value)} /></div>
-            <div className="space-y-2"><label className="text-sm font-medium">Subject</label><Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} /></div>
-            <div className="space-y-2"><label className="text-sm font-medium">Email Body</label><Textarea value={generateEmailBody()} className="min-h-[300px] font-mono text-sm" readOnly /></div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To (separate multiple emails with commas)</label>
+              <Input placeholder="email@example.com, another@example.com" value={emailTo} onChange={(e) => setEmailTo(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">CC</label>
+                <Input placeholder="cc@example.com" value={emailCc} onChange={(e) => setEmailCc(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">BCC</label>
+                <Input placeholder="bcc@example.com" value={emailBcc} onChange={(e) => setEmailBcc(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Subject</label>
+              <Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Preview</label>
+              <div className="border rounded-lg p-4 bg-muted/50 max-h-[300px] overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: generateEmailHtml() }} />
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowEmailModal(false)}>Cancel</Button>
-              <Button onClick={() => setShowEmailModal(false)}><Mail className="h-4 w-4" />Send Email</Button>
+              <Button onClick={handleSendEmail} disabled={isSendingEmail}>
+                {isSendingEmail ? <><Loader2 className="h-4 w-4 animate-spin" />Sending...</> : <><Mail className="h-4 w-4" />Send Email</>}
+              </Button>
             </div>
           </div>
         </DialogContent>

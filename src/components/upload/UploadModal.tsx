@@ -1,26 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Mic, Video, Upload, Loader2, Check, ChevronDown } from "lucide-react";
+import { FileText, Mic, Video, Upload, Loader2, Check, ChevronDown, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFolders } from "@/contexts/FoldersContext";
 import type { Folder } from "@/types";
+import { format } from "date-fns";
 
 type UploadType = "text" | "audio" | "video";
 
@@ -66,20 +57,22 @@ export function UploadModal({
   const [content, setContent] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [folderId, setFolderId] = useState<string>(defaultFolderId || "");
-  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+  const [isCreatingNewFolder, setIsCreatingNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [meetingDate, setMeetingDate] = useState<Date>(new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const newFolderInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (showNewFolderInput && newFolderInputRef.current) {
+    if (isCreatingNewFolder && newFolderInputRef.current) {
       newFolderInputRef.current.focus();
     }
-  }, [showNewFolderInput]);
+  }, [isCreatingNewFolder]);
 
   useEffect(() => {
     if (defaultFolderId) {
@@ -88,20 +81,21 @@ export function UploadModal({
   }, [defaultFolderId]);
 
   const handleNewFolderSelect = () => {
-    setShowNewFolderInput(true);
+    setIsCreatingNewFolder(true);
     setFolderId("");
-    // Keep dropdown open
+    setDropdownOpen(false);
+  };
+
+  const handleFolderSelect = (id: string) => {
+    setFolderId(id);
+    setIsCreatingNewFolder(false);
+    setNewFolderName("");
+    setDropdownOpen(false);
   };
 
   const handleNewFolderKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && newFolderName.trim()) {
-      const id = createFolder(newFolderName.trim());
-      setFolderId(id);
-      setShowNewFolderInput(false);
-      setNewFolderName("");
-      setDropdownOpen(false);
-    } else if (e.key === "Escape") {
-      setShowNewFolderInput(false);
+    if (e.key === "Escape") {
+      setIsCreatingNewFolder(false);
       setNewFolderName("");
     }
   };
@@ -120,9 +114,9 @@ export function UploadModal({
       return;
     }
     
-    // Allow creating with new folder name typed but not yet confirmed
+    // Allow creating with new folder name typed
     let targetFolderId = folderId;
-    if (!folderId && newFolderName.trim()) {
+    if (isCreatingNewFolder && newFolderName.trim()) {
       targetFolderId = createFolder(newFolderName.trim());
     }
     
@@ -139,14 +133,14 @@ export function UploadModal({
     setIsUploading(true);
 
     try {
-      // Create meeting with placeholder summary (will be replaced by AI)
       const meetingId = createMeeting({
         title: title.trim(),
         folderId: targetFolderId,
         isStarred: false,
         isPinned: false,
+        meetingDate: meetingDate,
         transcript: content,
-        summary: null, // Will be generated
+        summary: null,
         sourceType: selectedType,
       });
 
@@ -155,7 +149,6 @@ export function UploadModal({
         description: "Generating AI summary for your meeting.",
       });
 
-      // Generate AI summary
       try {
         await generateSummary(meetingId, content);
         toast({
@@ -181,19 +174,22 @@ export function UploadModal({
 
   const handleClose = () => {
     onOpenChange(false);
-    // Reset
     setTitle("");
     setSelectedType(null);
     setContent("");
     setAudioFile(null);
     setFolderId(defaultFolderId || "");
-    setShowNewFolderInput(false);
+    setIsCreatingNewFolder(false);
     setNewFolderName("");
     setError(null);
     setDropdownOpen(false);
+    setMeetingDate(new Date());
   };
 
   const selectedFolder = folders.find((f) => f.id === folderId);
+  const displayFolderName = isCreatingNewFolder 
+    ? "New Folder" 
+    : selectedFolder?.name || "Select a folder";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -213,7 +209,34 @@ export function UploadModal({
             />
           </div>
 
-          {/* 2. Upload Type Selection */}
+          {/* 2. Meeting Date */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Meeting Date</label>
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {format(meetingDate, "PPP")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={meetingDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setMeetingDate(date);
+                      setDatePickerOpen(false);
+                    }
+                  }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 3. Upload Type Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Upload Content</label>
             <div className="grid gap-2">
@@ -257,7 +280,7 @@ export function UploadModal({
             </div>
           </div>
 
-          {/* 2b. Content Input Area */}
+          {/* Content Input Area */}
           <AnimatePresence mode="wait">
             {selectedType === "text" && (
               <motion.div
@@ -335,54 +358,78 @@ export function UploadModal({
             )}
           </AnimatePresence>
 
-          {/* 3. Folder Selection */}
+          {/* 4. Folder Selection - Simplified */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Save To Folder</label>
-            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  {selectedFolder ? selectedFolder.name : (newFolderName ? `New: ${newFolderName}` : "Select a folder")}
+            
+            {/* Dropdown trigger that shows selected folder or "New Folder" */}
+            {!isCreatingNewFolder ? (
+              <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {displayFolderName}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+                  <div className="max-h-[200px] overflow-y-auto">
+                    {folders.map((folder) => (
+                      <button
+                        key={folder.id}
+                        onClick={() => handleFolderSelect(folder.id)}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
+                      >
+                        {folder.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t">
+                    <button
+                      onClick={handleNewFolderSelect}
+                      className="w-full px-3 py-2 text-left text-sm text-primary hover:bg-accent transition-colors"
+                    >
+                      + New Folder
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              /* When creating new folder, show condensed button + text input */
+              <div className="space-y-2">
+                <Button variant="outline" className="w-full justify-between" onClick={() => setDropdownOpen(true)}>
+                  New Folder
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                {folders.map((folder) => (
-                  <DropdownMenuItem 
-                    key={folder.id} 
-                    onClick={() => {
-                      setFolderId(folder.id);
-                      setShowNewFolderInput(false);
-                      setNewFolderName("");
-                    }}
-                  >
-                    {folder.name}
-                  </DropdownMenuItem>
-                ))}
-                {folders.length > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleNewFolderSelect();
-                  }}
-                  className="focus:bg-transparent"
-                >
-                  <span className="text-primary">+ New Folder</span>
-                </DropdownMenuItem>
-                {showNewFolderInput && (
-                  <div className="px-2 py-1.5">
-                    <Input
-                      ref={newFolderInputRef}
-                      placeholder="Enter folder name..."
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      onKeyDown={handleNewFolderKeyDown}
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-8"
-                    />
-                  </div>
+                <Input
+                  ref={newFolderInputRef}
+                  placeholder="Enter folder name..."
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={handleNewFolderKeyDown}
+                />
+                {/* Re-open dropdown to select existing folder instead */}
+                {dropdownOpen && (
+                  <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                    <PopoverTrigger asChild>
+                      <span />
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-full p-0">
+                      <div className="max-h-[200px] overflow-y-auto">
+                        {folders.map((folder) => (
+                          <button
+                            key={folder.id}
+                            onClick={() => handleFolderSelect(folder.id)}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
+                          >
+                            {folder.name}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            )}
           </div>
 
           {/* Error */}
