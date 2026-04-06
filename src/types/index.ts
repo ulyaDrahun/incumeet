@@ -26,6 +26,8 @@ export interface Meeting {
   createdAt: Date;
   updatedAt: Date;
   meetingDate: Date;
+  startTime?: string; // "HH:mm" format e.g. "09:00"
+  duration?: number;  // in minutes
   transcript: string;
   summary: MeetingSummary | null;
   sourceType: 'text' | 'audio' | 'video';
