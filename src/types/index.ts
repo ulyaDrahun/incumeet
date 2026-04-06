@@ -29,6 +29,7 @@ export interface Meeting {
   transcript: string;
   summary: MeetingSummary | null;
   sourceType: 'text' | 'audio' | 'video';
+  manualNotes?: string;
   order: number;
 }
 
