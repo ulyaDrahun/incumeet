@@ -141,7 +141,7 @@ interface FoldersContextType {
   generateSummary: (meetingId: string, transcript: string) => Promise<void>;
   getActualMeetingCount: (folderId: string) => number;
   addCalendarNote: (date: Date, content: string) => void;
-  addMeetingFromCalendar: (date: Date, title: string, folderId: string) => string;
+  addMeetingFromCalendar: (date: Date, title: string, folderId: string, startTime?: string, duration?: number) => string;
 }
 
 const FoldersContext = createContext<FoldersContextType | undefined>(undefined);
