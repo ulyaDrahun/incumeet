@@ -141,7 +141,7 @@ interface FoldersContextType {
   generateSummary: (meetingId: string, transcript: string) => Promise<void>;
   getActualMeetingCount: (folderId: string) => number;
   addCalendarNote: (date: Date, content: string) => void;
-  addMeetingFromCalendar: (date: Date, title: string, folderId: string) => string;
+  addMeetingFromCalendar: (date: Date, title: string, folderId: string, startTime?: string, duration?: number) => string;
 }
 
 const FoldersContext = createContext<FoldersContextType | undefined>(undefined);
@@ -301,18 +301,20 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
     setCalendarNotes((prev) => [...prev, note]);
   };
 
-  const addMeetingFromCalendar = (date: Date, title: string, folderId: string): string => {
-    return createMeeting({
-      title,
-      folderId,
-      isStarred: false,
-      isPinned: false,
-      meetingDate: date,
-      transcript: "",
-      summary: null,
-      sourceType: "text",
-    });
-  };
+   const addMeetingFromCalendar = (date: Date, title: string, folderId: string, startTime?: string, duration?: number): string => {
+     return createMeeting({
+       title,
+       folderId,
+       isStarred: false,
+       isPinned: false,
+       meetingDate: date,
+       startTime,
+       duration,
+       transcript: "",
+       summary: null,
+       sourceType: "text",
+     });
+   };
 
   const generateSummary = async (meetingId: string, transcript: string): Promise<void> => {
     const { data, error } = await supabase.functions.invoke("summarize-meeting", {
