@@ -38,6 +38,9 @@ export default function MeetingDetail() {
   const [isEditingTranscript, setIsEditingTranscript] = useState(false);
   const [editedTranscript, setEditedTranscript] = useState(meeting?.transcript || "");
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [editMeetingStartTime, setEditMeetingStartTime] = useState(meeting?.startTime || "09:00");
+  const [editMeetingDuration, setEditMeetingDuration] = useState(String(meeting?.duration || 60));
 
   useEffect(() => {
     if (meeting?.summary) setEditedSummary(meeting.summary);
