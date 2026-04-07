@@ -194,9 +194,49 @@ export default function MeetingDetail() {
               <Button size="sm" onClick={() => setShowEmailModal(true)}><Mail className="h-4 w-4" />Email</Button>
             </div>
           </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Meeting Date: {meeting.meetingDate.toLocaleDateString()} • Created {meeting.createdAt.toLocaleDateString()} • {meeting.sourceType === "text" ? "Text transcript" : meeting.sourceType === "audio" ? "Audio recording" : "Video"}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground mt-1 text-sm">
+            <span>Meeting Date: {meeting.meetingDate.toLocaleDateString()}</span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {meeting.startTime ? (
+                <span>{meeting.startTime} – {(() => { const t = (meeting.startTime.split(":").map(Number)[0] * 60 + (meeting.startTime.split(":").map(Number)[1] || 0)) + (meeting.duration || 60); const h = Math.floor(t / 60) % 24; const m = t % 60; return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`; })()} ({meeting.duration || 60} min)</span>
+              ) : (
+                <span className="italic">No time set</span>
+              )}
+              <button onClick={() => setIsEditingTime(true)} className="text-primary hover:underline text-xs ml-1">Edit</button>
+            </span>
+            <span>•</span>
+            <span>Created {meeting.createdAt.toLocaleDateString()}</span>
+            <span>•</span>
+            <span>{meeting.sourceType === "text" ? "Text transcript" : meeting.sourceType === "audio" ? "Audio recording" : "Video"}</span>
+          </div>
+          {isEditingTime && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2 mt-2">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Start time</label>
+                <Select value={editMeetingStartTime} onValueChange={setEditMeetingStartTime}>
+                  <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-48">
+                    {Array.from({ length: 48 }, (_, i) => { const h = Math.floor(i / 2); const m = (i % 2) * 30; return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`; }).map(t => (
+                      <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Duration (min)</label>
+                <Input type="number" min="1" value={editMeetingDuration} onChange={(e) => setEditMeetingDuration(e.target.value)} className="w-24 h-8 text-xs" />
+              </div>
+              <div className="flex items-end gap-1 pb-0.5">
+                <Button size="sm" className="h-8 text-xs" onClick={() => {
+                  updateMeeting(meeting.id, { startTime: editMeetingStartTime, duration: parseInt(editMeetingDuration) || 60 });
+                  setIsEditingTime(false);
+                }}>Save</Button>
+                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setIsEditingTime(false)}>Cancel</Button>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Tab buttons */}
