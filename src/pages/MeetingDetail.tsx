@@ -311,10 +311,43 @@ export default function MeetingDetail() {
       </div>
 
       {/* Transcript Modal */}
-      <Dialog open={showTranscript} onOpenChange={setShowTranscript}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Full Transcript</DialogTitle></DialogHeader>
-          <pre className="whitespace-pre-wrap text-sm font-sans text-muted-foreground bg-muted p-4 rounded-lg">{meeting.transcript || "No transcript available."}</pre>
+      <Dialog open={showTranscript} onOpenChange={(open) => { setShowTranscript(open); if (!open) setIsEditingTranscript(false); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Full Transcript</DialogTitle>
+              <div className="flex items-center gap-2">
+                {isEditingTranscript ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => { setEditedTranscript(meeting.transcript); setIsEditingTranscript(false); }}>
+                      <X className="h-4 w-4" />Cancel
+                    </Button>
+                    <Button size="sm" onClick={() => { updateMeeting(meeting.id, { transcript: editedTranscript }); setIsEditingTranscript(false); toast({ title: "Transcript updated" }); }}>
+                      <Check className="h-4 w-4" />Save
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => { setEditedTranscript(meeting.transcript); setIsEditingTranscript(true); }}>
+                    <Edit3 className="h-4 w-4" />Edit
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {isEditingTranscript ? (
+              <Textarea
+                value={editedTranscript}
+                onChange={(e) => setEditedTranscript(e.target.value)}
+                className="min-h-[400px] w-full font-sans text-sm"
+                placeholder="Paste or type your transcript here..."
+              />
+            ) : (
+              <pre className="whitespace-pre-wrap text-sm font-sans text-muted-foreground bg-muted p-4 rounded-lg">
+                {meeting.transcript || "No transcript available. Click Edit to add one."}
+              </pre>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
