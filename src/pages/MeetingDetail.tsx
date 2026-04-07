@@ -272,12 +272,24 @@ export default function MeetingDetail() {
                           <div key={groupIdx}>
                             <h3 className="font-semibold text-foreground mb-2">{group.person}</h3>
                             <ul className="space-y-2 ml-4">
-                              {group.items.map((item, itemIdx) => (
-                                <li key={itemIdx} className="flex items-start gap-3">
-                                  <div className="w-4 h-4 rounded border-2 border-muted-foreground/40 mt-0.5 shrink-0" />
-                                  <span className="text-foreground">{item}</span>
-                                </li>
-                              ))}
+                              {group.items.map((item, itemIdx) => {
+                                const key = `${groupIdx}-${itemIdx}`;
+                                const isChecked = checkedItems[key] || false;
+                                return (
+                                  <li key={itemIdx} className="flex items-start gap-3">
+                                    <button
+                                      onClick={() => setCheckedItems(prev => ({ ...prev, [key]: !prev[key] }))}
+                                      className={cn(
+                                        "w-4 h-4 rounded border-2 mt-0.5 shrink-0 flex items-center justify-center transition-colors",
+                                        isChecked ? "bg-primary border-primary" : "border-muted-foreground/40 hover:border-primary/60"
+                                      )}
+                                    >
+                                      {isChecked && <Check className="h-3 w-3 text-primary-foreground" />}
+                                    </button>
+                                    <span className={cn("text-foreground transition-colors", isChecked && "line-through text-muted-foreground")}>{item}</span>
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
                         ))}
