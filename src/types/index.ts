@@ -51,6 +51,8 @@ export interface CalendarNote {
   date: Date;
   content: string;
   meetingId?: string;
+  startTime?: string;
+  duration?: number;
 }
 
 export interface EmailDraft {

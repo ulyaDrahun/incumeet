@@ -369,6 +369,7 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
         generateSummary,
         getActualMeetingCount,
         addCalendarNote,
+        updateCalendarNote,
         addMeetingFromCalendar,
       }}
     >
