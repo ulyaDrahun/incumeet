@@ -138,20 +138,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const dayNotes = selectedDate ? getNotesForDate(selectedDate) : [];
   const dayMeetings = selectedDate ? getMeetingsForDate(selectedDate) : [];
 
-  // Build timeline slots for visible hours
-  const getTimelineHours = () => {
-    if (dayMeetings.length === 0) return HOURS.slice(8, 20); // 8am-8pm default
-    let minH = 8, maxH = 20;
-    dayMeetings.forEach(m => {
-      if (m.startTime) {
-        const start = parseTime(m.startTime);
-        const end = start + (m.duration || 60);
-        minH = Math.min(minH, Math.floor(start / 60));
-        maxH = Math.max(maxH, Math.ceil(end / 60));
-      }
-    });
-    return HOURS.slice(Math.max(0, minH - 1), Math.min(24, maxH + 1));
-  };
+  const getTimelineHours = () => HOURS; // Full 24h timeline
 
   return (
     <div className="p-4">
