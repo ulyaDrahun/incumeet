@@ -14,11 +14,12 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSa
 
 interface CalendarViewProps {
   notes: CalendarNote[];
-  onAddNote: (date: Date, content: string) => void;
+  onAddNote: (date: Date, content: string, startTime?: string, duration?: number) => void;
   onAddMeeting: (date: Date, title: string, folderId: string, startTime?: string, duration?: number) => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOUR_HEIGHT = 60; // px per hour
 
 function formatTime(hour: number, minute: number = 0) {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
@@ -34,6 +35,13 @@ function endTimeStr(startTime: string, duration: number): string {
   const h = Math.floor(total / 60) % 24;
   const m = total % 60;
   return formatTime(h, m);
+}
+
+function formatHourLabel(hour: number) {
+  if (hour === 0) return "12 AM";
+  if (hour < 12) return `${hour} AM`;
+  if (hour === 12) return "12 PM";
+  return `${hour - 12} PM`;
 }
 
 const DURATION_OPTIONS = [
@@ -52,9 +60,76 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return formatTime(h, m);
 });
 
+// Editable duration component: click to type custom, or use dropdown
+function DurationInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
+  const [isCustom, setIsCustom] = useState(false);
+  const [customValue, setCustomValue] = useState(value);
+
+  if (isCustom) {
+    return (
+      <Input
+        type="number"
+        min="1"
+        value={customValue}
+        onChange={(e) => setCustomValue(e.target.value)}
+        onBlur={() => {
+          const num = parseInt(customValue);
+          if (num > 0) onChange(String(num));
+          setIsCustom(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            const num = parseInt(customValue);
+            if (num > 0) onChange(String(num));
+            setIsCustom(false);
+          } else if (e.key === "Escape") {
+            setIsCustom(false);
+          }
+        }}
+        className={cn("h-8 text-xs w-24", className)}
+        placeholder="mins"
+        autoFocus
+      />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Select value={DURATION_OPTIONS.some(d => d.value === value) ? value : "custom"} onValueChange={(v) => {
+        if (v === "custom") { setCustomValue(value); setIsCustom(true); }
+        else onChange(v);
+      }}>
+        <SelectTrigger className={cn("h-8 text-xs w-28", className)} onClick={(e) => {
+          // If user clicks directly on the trigger text area (not the chevron), allow custom input
+        }}>
+          <SelectValue placeholder="Duration" />
+        </SelectTrigger>
+        <SelectContent>
+          {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>))}
+          <SelectItem value="custom" className="text-xs">Custom...</SelectItem>
+        </SelectContent>
+      </Select>
+      <button
+        onClick={() => { setCustomValue(value); setIsCustom(true); }}
+        className="text-[10px] text-muted-foreground hover:text-foreground underline"
+        title="Enter exact minutes"
+      >
+        edit
+      </button>
+    </div>
+  );
+}
+
+function formatDurationLabel(mins: number): string {
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewProps) {
   const navigate = useNavigate();
-  const { folders, meetings, updateMeeting } = useFolders();
+  const { folders, meetings, updateMeeting, updateCalendarNote } = useFolders();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
@@ -66,8 +141,12 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const [startTime, setStartTime] = useState("09:00");
   const [duration, setDuration] = useState("60");
   const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
+  const [editingNoteTimeId, setEditingNoteTimeId] = useState<string | null>(null);
   const [editStartTime, setEditStartTime] = useState("09:00");
   const [editDuration, setEditDuration] = useState("60");
+  const [includeNoteTime, setIncludeNoteTime] = useState(false);
+  const [noteStartTime, setNoteStartTime] = useState("09:00");
+  const [noteDuration, setNoteDuration] = useState("30");
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -99,6 +178,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setShowDayDetail(true);
     setShowAddForm(false);
     setEditingTimeId(null);
+    setEditingNoteTimeId(null);
   };
 
   const handleAddClick = (e: React.MouseEvent, date: Date) => {
@@ -108,12 +188,14 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setShowAddForm(true);
     setAddType("note");
     setEditingTimeId(null);
+    setEditingNoteTimeId(null);
+    setIncludeNoteTime(false);
   };
 
   const handleSubmit = () => {
     if (!selectedDate) return;
     if (addType === "note" && noteContent.trim()) {
-      onAddNote(selectedDate, noteContent.trim());
+      onAddNote(selectedDate, noteContent.trim(), includeNoteTime ? noteStartTime : undefined, includeNoteTime ? parseInt(noteDuration) : undefined);
     } else if (addType === "meeting" && meetingTitle.trim() && selectedFolderId) {
       onAddMeeting(selectedDate, meetingTitle.trim(), selectedFolderId, startTime, parseInt(duration));
     }
@@ -123,6 +205,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setSelectedFolderId("");
     setStartTime("09:00");
     setDuration("60");
+    setIncludeNoteTime(false);
+    setNoteStartTime("09:00");
+    setNoteDuration("30");
   };
 
   const handleSaveTime = (meeting: Meeting) => {
@@ -135,10 +220,32 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setEditingTimeId(null);
   };
 
+  const handleSaveNoteTime = (note: CalendarNote) => {
+    updateCalendarNote(note.id, {
+      startTime: editStartTime,
+      duration: parseInt(editDuration),
+    });
+    setEditingNoteTimeId(null);
+  };
+
   const dayNotes = selectedDate ? getNotesForDate(selectedDate) : [];
   const dayMeetings = selectedDate ? getMeetingsForDate(selectedDate) : [];
 
-  const getTimelineHours = () => HOURS; // Full 24h timeline
+  // Combine scheduled meetings and notes for timeline
+  type TimelineItem = { type: "meeting"; data: Meeting } | { type: "note"; data: CalendarNote };
+  const scheduledMeetings = dayMeetings.filter(m => m.startTime);
+  const unscheduledMeetings = dayMeetings.filter(m => !m.startTime);
+  const scheduledNotes = dayNotes.filter(n => n.startTime);
+  const unscheduledNotes = dayNotes.filter(n => !n.startTime);
+
+  const timelineItems: TimelineItem[] = [
+    ...scheduledMeetings.map(m => ({ type: "meeting" as const, data: m })),
+    ...scheduledNotes.map(n => ({ type: "note" as const, data: n })),
+  ].sort((a, b) => {
+    const aTime = a.type === "meeting" ? parseTime((a.data as Meeting).startTime!) : parseTime((a.data as CalendarNote).startTime!);
+    const bTime = b.type === "meeting" ? parseTime((b.data as Meeting).startTime!) : parseTime((b.data as CalendarNote).startTime!);
+    return aTime - bTime;
+  });
 
   return (
     <div className="p-4">
@@ -217,6 +324,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                 ))}
                 {dn.slice(0, 2).map((note) => (
                   <div key={note.id} className="text-[11px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded truncate">
+                    {note.startTime && (
+                      <span className="font-medium mr-1">{note.startTime}</span>
+                    )}
                     <StickyNote className="h-2.5 w-2.5 inline mr-0.5" />
                     {note.content}
                   </div>
@@ -258,6 +368,29 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   {addType === "note" ? (
                     <motion.div key="note" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
                       <Textarea placeholder="Write your note..." value={noteContent} onChange={(e) => setNoteContent(e.target.value)} className="min-h-[80px]" autoFocus />
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                          <input type="checkbox" checked={includeNoteTime} onChange={(e) => setIncludeNoteTime(e.target.checked)} className="rounded" />
+                          Set time
+                        </label>
+                      </div>
+                      {includeNoteTime && (
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground mb-1 block">Start time</label>
+                            <Select value={noteStartTime} onValueChange={setNoteStartTime}>
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent className="max-h-48">
+                                {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground mb-1 block">Duration</label>
+                            <DurationInput value={noteDuration} onChange={setNoteDuration} />
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   ) : (
                     <motion.div key="meeting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
@@ -282,12 +415,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         </div>
                         <div className="flex-1">
                           <label className="text-xs text-muted-foreground mb-1 block">Duration</label>
-                          <Select value={duration} onValueChange={setDuration}>
-                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
+                          <DurationInput value={duration} onChange={setDuration} />
                         </div>
                       </div>
                     </motion.div>
@@ -301,135 +429,173 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
             )}
 
             {/* Unscheduled meetings at top */}
-            {dayMeetings.filter(m => !m.startTime).length > 0 && (
+            {(unscheduledMeetings.length > 0 || unscheduledNotes.length > 0) && (
               <div className="border-b border-border pb-3">
                 <h4 className="text-xs font-medium text-muted-foreground mb-2">Unscheduled</h4>
-                {dayMeetings.filter(m => !m.startTime).map(meeting => (
-                  <div key={meeting.id} className="flex items-center justify-between bg-primary/5 rounded-lg p-2.5 mb-1">
-                    <button
-                      onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting.id}`); }}
-                      className="flex items-center gap-2 hover:text-primary transition-colors"
-                    >
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">{meeting.title}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
-                        setEditStartTime("09:00");
-                        setEditDuration("60");
-                      }}
-                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                    >
-                      <Clock className="h-3 w-3" /> Set time
-                    </button>
+                {unscheduledMeetings.map(meeting => (
+                  <div key={meeting.id} className="bg-primary/5 rounded-lg p-2.5 mb-1">
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting.id}`); }}
+                        className="flex items-center gap-2 hover:text-primary transition-colors"
+                      >
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">{meeting.title}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
+                          setEditStartTime("09:00");
+                          setEditDuration(String(meeting.duration || 60));
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      >
+                        <Clock className="h-3 w-3" /> Set time
+                      </button>
+                    </div>
                     {editingTimeId === meeting.id && (
-                      <div className="flex items-center gap-2 ml-2">
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
                         <Select value={editStartTime} onValueChange={setEditStartTime}>
-                          <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent className="max-h-48">
                             {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
                           </SelectContent>
                         </Select>
-                        <Select value={editDuration} onValueChange={setEditDuration}>
-                          <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>))}
+                        <DurationInput value={editDuration} onChange={setEditDuration} />
+                        <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>Save</Button>
+                      </motion.div>
+                    )}
+                  </div>
+                ))}
+                {unscheduledNotes.map(note => (
+                  <div key={note.id} className="bg-muted/50 rounded-lg p-2.5 mb-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <StickyNote className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{note.content}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingNoteTimeId(editingNoteTimeId === note.id ? null : note.id);
+                          setEditStartTime("09:00");
+                          setEditDuration(String(note.duration || 30));
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      >
+                        <Clock className="h-3 w-3" /> Set time
+                      </button>
+                    </div>
+                    {editingNoteTimeId === note.id && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                        <Select value={editStartTime} onValueChange={setEditStartTime}>
+                          <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent className="max-h-48">
+                            {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
                           </SelectContent>
                         </Select>
-                        <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>Save</Button>
-                      </div>
+                        <DurationInput value={editDuration} onChange={setEditDuration} />
+                        <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveNoteTime(note)}>Save</Button>
+                      </motion.div>
                     )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Notes section */}
-            {dayNotes.length > 0 && (
-              <div className="border-b border-border pb-3">
-                <h4 className="text-xs font-medium text-muted-foreground mb-2">Notes</h4>
-                {dayNotes.map((note) => (
-                  <div key={note.id} className="p-2.5 rounded-lg border border-border bg-muted/50 mb-1">
-                    <p className="text-sm">{note.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Full day timeline */}
+            {/* Full day timeline with proportional blocks */}
             <div className="relative">
               <h4 className="text-xs font-medium text-muted-foreground mb-2">Daily Timeline</h4>
-              <div className="space-y-0">
-                {getTimelineHours().map((hour) => {
-                  const hourMeetings = dayMeetings.filter(m => {
-                    if (!m.startTime) return false;
-                    const startMin = parseTime(m.startTime);
-                    const endMin = startMin + (m.duration || 60);
-                    const hourStart = hour * 60;
-                    const hourEnd = (hour + 1) * 60;
-                    return startMin < hourEnd && endMin > hourStart;
-                  });
+              <div className="relative" style={{ height: HOURS.length * HOUR_HEIGHT }}>
+                {/* Hour grid lines */}
+                {HOURS.map((hour) => (
+                  <div
+                    key={hour}
+                    className="absolute w-full flex border-t border-border/30"
+                    style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                  >
+                    <div className="w-16 shrink-0 pr-2 pt-1 text-right">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {formatHourLabel(hour)}
+                      </span>
+                    </div>
+                    <div className="flex-1 border-l-2 border-border/30" />
+                  </div>
+                ))}
+
+                {/* Positioned timeline items */}
+                {timelineItems.map((item) => {
+                  const st = item.type === "meeting" ? (item.data as Meeting).startTime! : (item.data as CalendarNote).startTime!;
+                  const dur = item.type === "meeting" ? ((item.data as Meeting).duration || 60) : ((item.data as CalendarNote).duration || 30);
+                  const startMin = parseTime(st);
+                  const topPx = (startMin / 60) * HOUR_HEIGHT;
+                  const heightPx = Math.max((dur / 60) * HOUR_HEIGHT, 28); // minimum 28px
+                  const id = item.data.id;
+                  const isMeeting = item.type === "meeting";
+                  const meeting = isMeeting ? item.data as Meeting : null;
+                  const note = !isMeeting ? item.data as CalendarNote : null;
 
                   return (
-                    <div key={hour} className="flex min-h-[48px] border-t border-border/50">
-                      <div className="w-16 shrink-0 pr-2 pt-1 text-right">
-                        <span className="text-xs text-muted-foreground font-medium">
-                          {hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
-                        </span>
-                      </div>
-                      <div className="flex-1 pl-3 border-l-2 border-border/30 py-1 space-y-1">
-                        {hourMeetings.map(meeting => {
-                          const startMin = parseTime(meeting.startTime!);
-                          const meetingHourStart = hour * 60;
-                          if (startMin < meetingHourStart || startMin >= meetingHourStart + 60) return null;
-                          return (
-                            <div key={meeting.id} className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 space-y-1">
-                              <div className="flex items-center justify-between">
-                                <button
-                                  onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting.id}`); }}
-                                  className="flex items-center gap-2 hover:text-primary transition-colors text-left"
-                                >
-                                  <FileText className="h-4 w-4 text-primary shrink-0" />
-                                  <span className="text-sm font-medium">{meeting.title}</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
-                                    setEditStartTime(meeting.startTime || "09:00");
-                                    setEditDuration(String(meeting.duration || 60));
-                                  }}
-                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                                >
-                                  <Clock className="h-3 w-3" />Edit time
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span className="font-medium">{meeting.startTime} – {endTimeStr(meeting.startTime!, meeting.duration || 60)}</span>
-                                <span>•</span>
-                                <span>{folders.find(f => f.id === meeting.folderId)?.name}</span>
-                              </div>
-                              {editingTimeId === meeting.id && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2 pt-2 border-t border-border/50 mt-1">
-                                  <Select value={editStartTime} onValueChange={setEditStartTime}>
-                                    <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
-                                    <SelectContent className="max-h-48">
-                                      {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Select value={editDuration} onValueChange={setEditDuration}>
-                                    <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                      {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>Save</Button>
-                                </motion.div>
-                              )}
+                    <div
+                      key={id}
+                      className={cn(
+                        "absolute left-[68px] right-2 rounded-lg border px-3 py-1.5 overflow-hidden",
+                        isMeeting ? "bg-primary/10 border-primary/20" : "bg-accent/60 border-accent"
+                      )}
+                      style={{ top: topPx, height: heightPx }}
+                    >
+                      <div className="flex items-start justify-between h-full">
+                        <div className="min-w-0 flex-1">
+                          {isMeeting ? (
+                            <button
+                              onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting!.id}`); }}
+                              className="flex items-center gap-1.5 hover:text-primary transition-colors text-left"
+                            >
+                              <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span className="text-xs font-medium truncate">{meeting!.title}</span>
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <StickyNote className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-xs truncate">{note!.content}</span>
                             </div>
-                          );
-                        })}
+                          )}
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {st} – {endTimeStr(st, dur)} · {formatDurationLabel(dur)}
+                            {isMeeting && meeting && <span> · {folders.find(f => f.id === meeting.folderId)?.name}</span>}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (isMeeting) {
+                              setEditingTimeId(editingTimeId === id ? null : id);
+                              setEditingNoteTimeId(null);
+                            } else {
+                              setEditingNoteTimeId(editingNoteTimeId === id ? null : id);
+                              setEditingTimeId(null);
+                            }
+                            setEditStartTime(st);
+                            setEditDuration(String(dur));
+                          }}
+                          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 shrink-0 ml-1"
+                        >
+                          <Clock className="h-3 w-3" />
+                        </button>
                       </div>
+                      {((isMeeting && editingTimeId === id) || (!isMeeting && editingNoteTimeId === id)) && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 mt-1 pt-1 border-t border-border/50">
+                          <Select value={editStartTime} onValueChange={setEditStartTime}>
+                            <SelectTrigger className="w-24 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                            <SelectContent className="max-h-48">
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                          <DurationInput value={editDuration} onChange={setEditDuration} className="w-24" />
+                          <Button size="sm" className="h-7 text-[10px] px-2" onClick={() => {
+                            if (isMeeting) handleSaveTime(meeting!);
+                            else handleSaveNoteTime(note!);
+                          }}>Save</Button>
+                        </motion.div>
+                      )}
                     </div>
                   );
                 })}

@@ -140,7 +140,8 @@ interface FoldersContextType {
   getSubfolders: (parentId: string | null) => Folder[];
   generateSummary: (meetingId: string, transcript: string) => Promise<void>;
   getActualMeetingCount: (folderId: string) => number;
-  addCalendarNote: (date: Date, content: string) => void;
+  addCalendarNote: (date: Date, content: string, startTime?: string, duration?: number) => void;
+  updateCalendarNote: (id: string, updates: Partial<CalendarNote>) => void;
   addMeetingFromCalendar: (date: Date, title: string, folderId: string, startTime?: string, duration?: number) => string;
 }
 
@@ -292,13 +293,21 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
     return meetings.filter((m) => m.folderId === folderId).length;
   };
 
-  const addCalendarNote = (date: Date, content: string) => {
+  const addCalendarNote = (date: Date, content: string, startTime?: string, duration?: number) => {
     const note: CalendarNote = {
       id: crypto.randomUUID(),
       date,
       content,
+      startTime,
+      duration,
     };
     setCalendarNotes((prev) => [...prev, note]);
+  };
+
+  const updateCalendarNote = (id: string, updates: Partial<CalendarNote>) => {
+    setCalendarNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, ...updates } : n))
+    );
   };
 
    const addMeetingFromCalendar = (date: Date, title: string, folderId: string, startTime?: string, duration?: number): string => {
@@ -360,6 +369,7 @@ export function FoldersProvider({ children }: { children: ReactNode }) {
         generateSummary,
         getActualMeetingCount,
         addCalendarNote,
+        updateCalendarNote,
         addMeetingFromCalendar,
       }}
     >
