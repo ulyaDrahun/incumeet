@@ -236,203 +236,28 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
       <Dialog open={showDayDetail} onOpenChange={setShowDayDetail}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>
-              {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : ""}
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>
+                {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : ""}
+              </DialogTitle>
+              <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
+                <Plus className="h-4 w-4 mr-1" />Add
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto space-y-4 py-2">
-            {/* Timeline view */}
-            {(dayMeetings.length > 0 || dayNotes.length > 0) && (
-              <div className="relative">
-                {/* Timeline hours */}
-                <div className="space-y-0">
-                  {getTimelineHours().map((hour) => {
-                    const hourMeetings = dayMeetings.filter(m => {
-                      if (!m.startTime) return false;
-                      const startMin = parseTime(m.startTime);
-                      const endMin = startMin + (m.duration || 60);
-                      const hourStart = hour * 60;
-                      const hourEnd = (hour + 1) * 60;
-                      return startMin < hourEnd && endMin > hourStart;
-                    });
-
-                    return (
-                      <div key={hour} className="flex min-h-[60px] border-t border-border/50">
-                        {/* Time label */}
-                        <div className="w-16 shrink-0 pr-2 pt-1 text-right">
-                          <span className="text-xs text-muted-foreground font-medium">
-                            {hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
-                          </span>
-                        </div>
-                        {/* Content area */}
-                        <div className="flex-1 pl-3 border-l-2 border-border/30 py-1 space-y-1">
-                          {hourMeetings.map(meeting => {
-                            const startMin = parseTime(meeting.startTime!);
-                            const meetingHourStart = hour * 60;
-                            // Only render at the starting hour
-                            if (startMin < meetingHourStart || startMin >= meetingHourStart + 60) return null;
-
-                            return (
-                              <div key={meeting.id} className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <button
-                                    onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting.id}`); }}
-                                    className="flex items-center gap-2 hover:text-primary transition-colors text-left"
-                                  >
-                                    <FileText className="h-4 w-4 text-primary shrink-0" />
-                                    <span className="text-sm font-medium">{meeting.title}</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
-                                      setEditStartTime(meeting.startTime || "09:00");
-                                      setEditDuration(String(meeting.duration || 60));
-                                    }}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                                  >
-                                    <Clock className="h-3 w-3" />
-                                    Edit time
-                                  </button>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span className="font-medium">
-                                    {meeting.startTime} – {endTimeStr(meeting.startTime!, meeting.duration || 60)}
-                                  </span>
-                                  <span>•</span>
-                                  <span>{folders.find(f => f.id === meeting.folderId)?.name}</span>
-                                </div>
-
-                                {/* Inline time editor */}
-                                {editingTimeId === meeting.id && (
-                                  <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    className="flex items-center gap-2 pt-2 border-t border-border/50 mt-1"
-                                  >
-                                    <Select value={editStartTime} onValueChange={setEditStartTime}>
-                                      <SelectTrigger className="w-28 h-8 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent className="max-h-48">
-                                        {TIME_OPTIONS.map(t => (
-                                          <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <Select value={editDuration} onValueChange={setEditDuration}>
-                                      <SelectTrigger className="w-28 h-8 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {DURATION_OPTIONS.map(d => (
-                                          <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>
-                                      Save
-                                    </Button>
-                                  </motion.div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Unscheduled meetings */}
-                {dayMeetings.filter(m => !m.startTime).length > 0 && (
-                  <div className="mt-4 border-t border-border pt-3">
-                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Unscheduled</h4>
-                    {dayMeetings.filter(m => !m.startTime).map(meeting => (
-                      <div key={meeting.id} className="flex items-center justify-between bg-primary/5 rounded-lg p-2.5 mb-1">
-                        <button
-                          onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting.id}`); }}
-                          className="flex items-center gap-2 hover:text-primary transition-colors"
-                        >
-                          <FileText className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium">{meeting.title}</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
-                            setEditStartTime("09:00");
-                            setEditDuration("60");
-                          }}
-                          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                        >
-                          <Clock className="h-3 w-3" /> Set time
-                        </button>
-                        {editingTimeId === meeting.id && (
-                          <div className="flex items-center gap-2 ml-2">
-                            <Select value={editStartTime} onValueChange={setEditStartTime}>
-                              <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent className="max-h-48">
-                                {TIME_OPTIONS.map(t => (
-                                  <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Select value={editDuration} onValueChange={setEditDuration}>
-                              <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {DURATION_OPTIONS.map(d => (
-                                  <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>Save</Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Notes section */}
-                {dayNotes.length > 0 && (
-                  <div className="mt-4 border-t border-border pt-3">
-                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Notes</h4>
-                    {dayNotes.map((note) => (
-                      <div key={note.id} className="p-2.5 rounded-lg border border-border bg-muted/50 mb-1">
-                        <p className="text-sm">{note.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {dayMeetings.length === 0 && dayNotes.length === 0 && !showAddForm && (
-              <p className="text-sm text-muted-foreground text-center py-8">No items for this day.</p>
-            )}
-
-            {/* Add form */}
-            {showAddForm ? (
-              <div className="space-y-3 border-t border-border pt-4">
+            {/* Add form at top when open */}
+            {showAddForm && (
+              <div className="space-y-3 border-b border-border pb-4">
                 <div className="flex gap-2">
-                  <Button variant={addType === "note" ? "default" : "outline"} size="sm" onClick={() => setAddType("note")} className="flex-1">
-                    Note
-                  </Button>
-                  <Button variant={addType === "meeting" ? "default" : "outline"} size="sm" onClick={() => setAddType("meeting")} className="flex-1">
-                    Meeting
-                  </Button>
+                  <Button variant={addType === "note" ? "default" : "outline"} size="sm" onClick={() => setAddType("note")} className="flex-1">Note</Button>
+                  <Button variant={addType === "meeting" ? "default" : "outline"} size="sm" onClick={() => setAddType("meeting")} className="flex-1">Meeting</Button>
                 </div>
-
                 <AnimatePresence mode="wait">
                   {addType === "note" ? (
                     <motion.div key="note" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
-                      <Textarea
-                        placeholder="Write your note..."
-                        value={noteContent}
-                        onChange={(e) => setNoteContent(e.target.value)}
-                        className="min-h-[80px]"
-                        autoFocus
-                      />
+                      <Textarea placeholder="Write your note..." value={noteContent} onChange={(e) => setNoteContent(e.target.value)} className="min-h-[80px]" autoFocus />
                     </motion.div>
                   ) : (
                     <motion.div key="meeting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
@@ -451,9 +276,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                           <Select value={startTime} onValueChange={setStartTime}>
                             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                             <SelectContent className="max-h-48">
-                              {TIME_OPTIONS.map(t => (
-                                <SelectItem key={t} value={t}>{t}</SelectItem>
-                              ))}
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -462,9 +285,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                           <Select value={duration} onValueChange={setDuration}>
                             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              {DURATION_OPTIONS.map(d => (
-                                <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                              ))}
+                              {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -472,16 +293,151 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                     </motion.div>
                   )}
                 </AnimatePresence>
-
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>Cancel</Button>
                   <Button size="sm" onClick={handleSubmit}>Add {addType === "note" ? "Note" : "Meeting"}</Button>
                 </div>
               </div>
-            ) : (
-              <Button variant="outline" className="w-full" onClick={() => setShowAddForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />Add Item
-              </Button>
+            )}
+
+            {/* Unscheduled meetings at top */}
+            {dayMeetings.filter(m => !m.startTime).length > 0 && (
+              <div className="border-b border-border pb-3">
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Unscheduled</h4>
+                {dayMeetings.filter(m => !m.startTime).map(meeting => (
+                  <div key={meeting.id} className="flex items-center justify-between bg-primary/5 rounded-lg p-2.5 mb-1">
+                    <button
+                      onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting.id}`); }}
+                      className="flex items-center gap-2 hover:text-primary transition-colors"
+                    >
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">{meeting.title}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
+                        setEditStartTime("09:00");
+                        setEditDuration("60");
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    >
+                      <Clock className="h-3 w-3" /> Set time
+                    </button>
+                    {editingTimeId === meeting.id && (
+                      <div className="flex items-center gap-2 ml-2">
+                        <Select value={editStartTime} onValueChange={setEditStartTime}>
+                          <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent className="max-h-48">
+                            {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={editDuration} onValueChange={setEditDuration}>
+                          <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>Save</Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Notes section */}
+            {dayNotes.length > 0 && (
+              <div className="border-b border-border pb-3">
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Notes</h4>
+                {dayNotes.map((note) => (
+                  <div key={note.id} className="p-2.5 rounded-lg border border-border bg-muted/50 mb-1">
+                    <p className="text-sm">{note.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Full day timeline */}
+            <div className="relative">
+              <h4 className="text-xs font-medium text-muted-foreground mb-2">Daily Timeline</h4>
+              <div className="space-y-0">
+                {getTimelineHours().map((hour) => {
+                  const hourMeetings = dayMeetings.filter(m => {
+                    if (!m.startTime) return false;
+                    const startMin = parseTime(m.startTime);
+                    const endMin = startMin + (m.duration || 60);
+                    const hourStart = hour * 60;
+                    const hourEnd = (hour + 1) * 60;
+                    return startMin < hourEnd && endMin > hourStart;
+                  });
+
+                  return (
+                    <div key={hour} className="flex min-h-[48px] border-t border-border/50">
+                      <div className="w-16 shrink-0 pr-2 pt-1 text-right">
+                        <span className="text-xs text-muted-foreground font-medium">
+                          {hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
+                        </span>
+                      </div>
+                      <div className="flex-1 pl-3 border-l-2 border-border/30 py-1 space-y-1">
+                        {hourMeetings.map(meeting => {
+                          const startMin = parseTime(meeting.startTime!);
+                          const meetingHourStart = hour * 60;
+                          if (startMin < meetingHourStart || startMin >= meetingHourStart + 60) return null;
+                          return (
+                            <div key={meeting.id} className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <button
+                                  onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting.id}`); }}
+                                  className="flex items-center gap-2 hover:text-primary transition-colors text-left"
+                                >
+                                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                                  <span className="text-sm font-medium">{meeting.title}</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
+                                    setEditStartTime(meeting.startTime || "09:00");
+                                    setEditDuration(String(meeting.duration || 60));
+                                  }}
+                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                                >
+                                  <Clock className="h-3 w-3" />Edit time
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="font-medium">{meeting.startTime} – {endTimeStr(meeting.startTime!, meeting.duration || 60)}</span>
+                                <span>•</span>
+                                <span>{folders.find(f => f.id === meeting.folderId)?.name}</span>
+                              </div>
+                              {editingTimeId === meeting.id && (
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2 pt-2 border-t border-border/50 mt-1">
+                                  <Select value={editStartTime} onValueChange={setEditStartTime}>
+                                    <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="max-h-48">
+                                      {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={editDuration} onValueChange={setEditDuration}>
+                                    <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>Save</Button>
+                                </motion.div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {dayMeetings.length === 0 && dayNotes.length === 0 && !showAddForm && (
+              <p className="text-sm text-muted-foreground text-center py-8">No items for this day.</p>
             )}
           </div>
         </DialogContent>
