@@ -140,7 +140,8 @@ interface FoldersContextType {
   getSubfolders: (parentId: string | null) => Folder[];
   generateSummary: (meetingId: string, transcript: string) => Promise<void>;
   getActualMeetingCount: (folderId: string) => number;
-  addCalendarNote: (date: Date, content: string) => void;
+  addCalendarNote: (date: Date, content: string, startTime?: string, duration?: number) => void;
+  updateCalendarNote: (id: string, updates: Partial<CalendarNote>) => void;
   addMeetingFromCalendar: (date: Date, title: string, folderId: string, startTime?: string, duration?: number) => string;
 }
 
