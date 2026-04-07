@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Star, Pin, Mail, FileText, Edit3, Check, X, Loader2, RefreshCw, Pencil, Copy, NotebookPen } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,9 @@ export default function MeetingDetail() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(meeting?.title || "");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isEditingTranscript, setIsEditingTranscript] = useState(false);
+  const [editedTranscript, setEditedTranscript] = useState(meeting?.transcript || "");
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (meeting?.summary) setEditedSummary(meeting.summary);
@@ -269,12 +273,24 @@ export default function MeetingDetail() {
                           <div key={groupIdx}>
                             <h3 className="font-semibold text-foreground mb-2">{group.person}</h3>
                             <ul className="space-y-2 ml-4">
-                              {group.items.map((item, itemIdx) => (
-                                <li key={itemIdx} className="flex items-start gap-3">
-                                  <div className="w-4 h-4 rounded border-2 border-muted-foreground/40 mt-0.5 shrink-0" />
-                                  <span className="text-foreground">{item}</span>
-                                </li>
-                              ))}
+                              {group.items.map((item, itemIdx) => {
+                                const key = `${groupIdx}-${itemIdx}`;
+                                const isChecked = checkedItems[key] || false;
+                                return (
+                                  <li key={itemIdx} className="flex items-start gap-3">
+                                    <button
+                                      onClick={() => setCheckedItems(prev => ({ ...prev, [key]: !prev[key] }))}
+                                      className={cn(
+                                        "w-4 h-4 rounded border-2 mt-0.5 shrink-0 flex items-center justify-center transition-colors",
+                                        isChecked ? "bg-primary border-primary" : "border-muted-foreground/40 hover:border-primary/60"
+                                      )}
+                                    >
+                                      {isChecked && <Check className="h-3 w-3 text-primary-foreground" />}
+                                    </button>
+                                    <span className={cn("text-foreground transition-colors", isChecked && "line-through text-muted-foreground")}>{item}</span>
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
                         ))}
@@ -311,10 +327,43 @@ export default function MeetingDetail() {
       </div>
 
       {/* Transcript Modal */}
-      <Dialog open={showTranscript} onOpenChange={setShowTranscript}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Full Transcript</DialogTitle></DialogHeader>
-          <pre className="whitespace-pre-wrap text-sm font-sans text-muted-foreground bg-muted p-4 rounded-lg">{meeting.transcript || "No transcript available."}</pre>
+      <Dialog open={showTranscript} onOpenChange={(open) => { setShowTranscript(open); if (!open) setIsEditingTranscript(false); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Full Transcript</DialogTitle>
+              <div className="flex items-center gap-2">
+                {isEditingTranscript ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => { setEditedTranscript(meeting.transcript); setIsEditingTranscript(false); }}>
+                      <X className="h-4 w-4" />Cancel
+                    </Button>
+                    <Button size="sm" onClick={() => { updateMeeting(meeting.id, { transcript: editedTranscript }); setIsEditingTranscript(false); toast({ title: "Transcript updated" }); }}>
+                      <Check className="h-4 w-4" />Save
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => { setEditedTranscript(meeting.transcript); setIsEditingTranscript(true); }}>
+                    <Edit3 className="h-4 w-4" />Edit
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {isEditingTranscript ? (
+              <Textarea
+                value={editedTranscript}
+                onChange={(e) => setEditedTranscript(e.target.value)}
+                className="min-h-[400px] w-full font-sans text-sm"
+                placeholder="Paste or type your transcript here..."
+              />
+            ) : (
+              <pre className="whitespace-pre-wrap text-sm font-sans text-muted-foreground bg-muted p-4 rounded-lg">
+                {meeting.transcript || "No transcript available. Click Edit to add one."}
+              </pre>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
