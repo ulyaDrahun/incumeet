@@ -205,127 +205,16 @@ export function UploadModal({
             </Popover>
           </div>
 
-          {/* 3. Upload Type Selection */}
+          {/* 3. Transcript Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Upload Content</label>
-            <div className="grid gap-2">
-              {uploadOptions.map((option) => (
-                <button
-                  key={option.type}
-                  onClick={() => {
-                    setSelectedType(option.type);
-                    setContent("");
-                    setAudioFile(null);
-                  }}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
-                    selectedType === option.type
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50 hover:bg-accent"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "w-9 h-9 rounded-md flex items-center justify-center",
-                      selectedType === option.type ? "bg-primary/20" : "bg-secondary"
-                    )}
-                  >
-                    <option.icon
-                      className={cn(
-                        "h-5 w-5",
-                        selectedType === option.type ? "text-primary" : "text-muted-foreground"
-                      )}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{option.label}</p>
-                    <p className="text-xs text-muted-foreground">{option.description}</p>
-                  </div>
-                  {selectedType === option.type && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <label className="text-sm font-medium">Transcript</label>
+            <Textarea
+              placeholder="Paste your meeting transcript here..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="min-h-[140px] resize-none"
+            />
           </div>
-
-          {/* Content Input Area */}
-          <AnimatePresence mode="wait">
-            {selectedType === "text" && (
-              <motion.div
-                key="text"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-2 overflow-hidden"
-              >
-                <label className="text-sm font-medium">Transcript</label>
-                <Textarea
-                  placeholder="Paste your meeting transcript here..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="min-h-[140px] resize-none"
-                />
-              </motion.div>
-            )}
-
-            {selectedType === "audio" && (
-              <motion.div
-                key="audio"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-2 overflow-hidden"
-              >
-                <label className="text-sm font-medium">Audio File</label>
-                <input
-                  type="file"
-                  accept="audio/*"
-                  ref={audioInputRef}
-                  onChange={handleAudioChange}
-                  className="hidden"
-                />
-                <div
-                  onClick={() => audioInputRef.current?.click()}
-                  className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
-                >
-                  {audioFile ? (
-                    <p className="text-sm font-medium">{audioFile.name}</p>
-                  ) : (
-                    <>
-                      <Upload className="h-7 w-7 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        MP3, WAV, M4A up to 100MB
-                      </p>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            )}
-
-            {selectedType === "video" && (
-              <motion.div
-                key="video"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-2 overflow-hidden"
-              >
-                <label className="text-sm font-medium">Video URL</label>
-                <Input
-                  placeholder="https://youtube.com/watch?v=..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  YouTube, Loom, Vimeo, or direct video links
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* 4. Folder Selection - Simplified */}
           <div className="space-y-2">
