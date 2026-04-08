@@ -94,19 +94,19 @@ export default function MeetingDetail() {
 
   const formatActionItemsForText = () => {
     if (!meeting.summary?.actionItems) return "";
-    return meeting.summary.actionItems.map(group =>
-      `${group.person}:\n${group.items.map(item => `  • ${item}`).join("\n")}`
+    return (meeting.summary.actionItems || []).map(group =>
+      `${group.person}:\n${(group.items || []).map(item => `  • ${item}`).join("\n")}`
     ).join("\n\n");
   };
 
   const generateEmailBody = () => {
     if (!meeting.summary) return "";
-    return `Hi,\n\nHere's a summary of our meeting: ${meeting.title}\n\nSUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}\n\nBest regards`;
+    return `Hi,\n\nHere's a summary of our meeting: ${meeting.title}\n\nSUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${(meeting.summary.keyDecisions || []).map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}\n\nBest regards`;
   };
 
   const generateEmailHtml = () => {
     if (!meeting.summary) return "";
-    return `<!DOCTYPE html><html><head><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px}h1{color:#1a1a1a;font-size:24px;border-bottom:2px solid #4f46e5;padding-bottom:10px}h2{color:#4f46e5;font-size:16px;text-transform:uppercase;letter-spacing:.5px;margin-top:24px}.section{background:#f8f9fa;border-radius:8px;padding:16px;margin:12px 0}ul{margin:0;padding-left:20px}li{margin:8px 0}.person-name{font-weight:600;color:#1a1a1a;margin-top:12px;margin-bottom:4px}.footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:14px}</style></head><body><h1>${meeting.title}</h1><h2>Summary</h2><div class="section"><p>${meeting.summary.shortSummary}</p></div><h2>Key Decisions</h2><div class="section"><ul>${meeting.summary.keyDecisions.map(d => `<li>${d}</li>`).join("")}</ul></div><h2>Action Items</h2><div class="section">${meeting.summary.actionItems.map(group => `<p class="person-name">${group.person}</p><ul>${group.items.map(item => `<li>${item}</li>`).join("")}</ul>`).join("")}</div><div class="footer"><p>Best regards</p></div></body></html>`;
+    return `<!DOCTYPE html><html><head><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px}h1{color:#1a1a1a;font-size:24px;border-bottom:2px solid #4f46e5;padding-bottom:10px}h2{color:#4f46e5;font-size:16px;text-transform:uppercase;letter-spacing:.5px;margin-top:24px}.section{background:#f8f9fa;border-radius:8px;padding:16px;margin:12px 0}ul{margin:0;padding-left:20px}li{margin:8px 0}.person-name{font-weight:600;color:#1a1a1a;margin-top:12px;margin-bottom:4px}.footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:14px}</style></head><body><h1>${meeting.title}</h1><h2>Summary</h2><div class="section"><p>${meeting.summary.shortSummary}</p></div><h2>Key Decisions</h2><div class="section"><ul>${(meeting.summary.keyDecisions || []).map(d => `<li>${d}</li>`).join("")}</ul></div><h2>Action Items</h2><div class="section">${(meeting.summary.actionItems || []).map(group => `<p class="person-name">${group.person}</p><ul>${(group.items || []).map(item => `<li>${item}</li>`).join("")}</ul>`).join("")}</div><div class="footer"><p>Best regards</p></div></body></html>`;
   };
 
   const handleSendEmail = async () => {
@@ -129,7 +129,7 @@ export default function MeetingDetail() {
 
   const copyToClipboard = () => {
     if (!meeting.summary) return;
-    const text = `SUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}`;
+    const text = `SUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${(meeting.summary.keyDecisions || []).map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}`;
     navigator.clipboard.writeText(text);
     toast({ title: "Copied to clipboard" });
   };
@@ -293,7 +293,7 @@ export default function MeetingDetail() {
                       <Textarea value={editedSummary?.keyDecisions.join("\n") || ""} onChange={(e) => setEditedSummary({ ...editedSummary!, keyDecisions: e.target.value.split("\n").filter(Boolean) })} placeholder="One decision per line" className="min-h-[120px]" />
                     ) : (
                       <ul className="space-y-2">
-                        {meeting.summary.keyDecisions.map((decision, i) => (
+                        {(meeting.summary.keyDecisions || []).map((decision, i) => (
                           <li key={i} className="flex items-start gap-3">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
                             <span className="text-foreground">{decision}</span>
@@ -313,7 +313,7 @@ export default function MeetingDetail() {
                       />
                     ) : (
                       <div className="space-y-4">
-                        {meeting.summary.actionItems.map((group, groupIdx) => (
+                        {(meeting.summary.actionItems || []).map((group, groupIdx) => (
                           <div key={groupIdx}>
                             <h3 className="font-semibold text-foreground mb-2">{group.person}</h3>
                             <ul className="space-y-2 ml-4">
