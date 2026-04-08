@@ -423,7 +423,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                       )}
                     >
                       {st ? (
-                        <span className="font-medium mr-1">{st}</span>
+                        <span className="font-medium mr-1">{formatTimeAMPM(st)}</span>
                       ) : (
                         <span className="font-medium mr-1 italic text-[10px]">unsched.</span>
                       )}
