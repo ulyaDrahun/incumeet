@@ -145,9 +145,8 @@ export function UploadModal({
   const handleClose = () => {
     onOpenChange(false);
     setTitle("");
-    setSelectedType(null);
+    setSelectedType("text");
     setContent("");
-    setAudioFile(null);
     setFolderId(defaultFolderId || "");
     setIsCreatingNewFolder(false);
     setNewFolderName("");
