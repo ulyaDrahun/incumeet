@@ -32,9 +32,8 @@ export function UploadModal({
   const { toast } = useToast();
 
   const [title, setTitle] = useState("");
-  const [selectedType, setSelectedType] = useState<UploadType | null>(null);
+  const [selectedType, setSelectedType] = useState<UploadType>("text");
   const [content, setContent] = useState("");
-  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [folderId, setFolderId] = useState<string>(defaultFolderId || "");
   const [isCreatingNewFolder, setIsCreatingNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
