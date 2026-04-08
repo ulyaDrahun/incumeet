@@ -79,8 +79,8 @@ export function UploadModal({
 
 
   const handleSubmit = async () => {
-    if (!title.trim() || !selectedType) {
-      setError("Please enter a meeting title and select a content type.");
+    if (!title.trim()) {
+      setError("Please enter a meeting title.");
       return;
     }
     
