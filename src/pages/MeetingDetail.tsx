@@ -94,8 +94,8 @@ export default function MeetingDetail() {
 
   const formatActionItemsForText = () => {
     if (!meeting.summary?.actionItems) return "";
-    return meeting.summary.actionItems.map(group =>
-      `${group.person}:\n${group.items.map(item => `  • ${item}`).join("\n")}`
+    return (meeting.summary.actionItems || []).map(group =>
+      `${group.person}:\n${(group.items || []).map(item => `  • ${item}`).join("\n")}`
     ).join("\n\n");
   };
 
