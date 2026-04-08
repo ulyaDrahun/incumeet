@@ -511,9 +511,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <div className="flex-1">
                           <label className="text-xs text-muted-foreground mb-1 block">Start time</label>
                           <Select value={startTime} onValueChange={setStartTime}>
-                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-9"><SelectValue>{formatTimeAMPM(startTime)}</SelectValue></SelectTrigger>
                             <SelectContent className="max-h-48">
-                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{formatTimeAMPM(t)}</SelectItem>))}
                             </SelectContent>
                           </Select>
                         </div>
