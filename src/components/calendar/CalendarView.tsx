@@ -60,6 +60,13 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return formatTime(h, m);
 });
 
+function formatTimeAMPM(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
 function DurationInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
   const [isCustom, setIsCustom] = useState(false);
   const [customValue, setCustomValue] = useState(value);
@@ -416,7 +423,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                       )}
                     >
                       {st ? (
-                        <span className="font-medium mr-1">{st}</span>
+                        <span className="font-medium mr-1">{formatTimeAMPM(st)}</span>
                       ) : (
                         <span className="font-medium mr-1 italic text-[10px]">unsched.</span>
                       )}
@@ -441,9 +448,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
 
       {/* Day Detail Popup */}
       <Dialog open={showDayDetail} onOpenChange={setShowDayDetail}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col pr-10">
           <DialogHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pr-4">
               <DialogTitle>
                 {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : ""}
               </DialogTitle>
@@ -475,10 +482,10 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <div className="flex gap-2">
                           <div className="flex-1">
                             <label className="text-xs text-muted-foreground mb-1 block">Start time</label>
-                            <Select value={noteStartTime} onValueChange={setNoteStartTime}>
-                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <Select value={noteStartTime} onValueChange={setNoteStartTime}>
+                              <SelectTrigger className="h-9"><SelectValue>{formatTimeAMPM(noteStartTime)}</SelectValue></SelectTrigger>
                               <SelectContent className="max-h-48">
-                                {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+                                {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{formatTimeAMPM(t)}</SelectItem>))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -504,9 +511,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <div className="flex-1">
                           <label className="text-xs text-muted-foreground mb-1 block">Start time</label>
                           <Select value={startTime} onValueChange={setStartTime}>
-                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-9"><SelectValue>{formatTimeAMPM(startTime)}</SelectValue></SelectTrigger>
                             <SelectContent className="max-h-48">
-                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t}>{formatTimeAMPM(t)}</SelectItem>))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -551,9 +558,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-xs" placeholder="Meeting name" />
                         <div className="flex items-center gap-2">
                           <Select value={editStartTime} onValueChange={setEditStartTime}>
-                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue>{formatTimeAMPM(editStartTime)}</SelectValue></SelectTrigger>
                             <SelectContent className="max-h-48">
-                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{formatTimeAMPM(t)}</SelectItem>))}
                             </SelectContent>
                           </Select>
                           <DurationInput value={editDuration} onChange={setEditDuration} />
@@ -582,9 +589,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-xs" placeholder="Note text" />
                         <div className="flex items-center gap-2">
                           <Select value={editStartTime} onValueChange={setEditStartTime}>
-                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue>{formatTimeAMPM(editStartTime)}</SelectValue></SelectTrigger>
                             <SelectContent className="max-h-48">
-                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{formatTimeAMPM(t)}</SelectItem>))}
                             </SelectContent>
                           </Select>
                           <DurationInput value={editDuration} onChange={setEditDuration} />
@@ -635,67 +642,82 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   const leftOffset = `calc(68px + (${availableWidth} / ${overlap.totalCols}) * ${overlap.col})`;
 
                   return (
-                    <div
-                      key={id}
-                      className={cn(
-                        "absolute rounded-lg border px-2 py-1 overflow-hidden",
-                        isMeeting ? "bg-primary/10 border-primary/20" : "bg-accent/60 border-accent"
-                      )}
-                      style={{
-                        top: topPx,
-                        height: heightPx,
-                        left: leftOffset,
-                        width: `calc(${colWidth} - 4px)`,
-                      }}
-                    >
-                      <div className="flex items-start justify-between h-full">
-                        <div className="min-w-0 flex-1">
-                          {isMeeting ? (
-                            <button
-                              onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting!.id}`); }}
-                              className="flex items-center gap-1 hover:text-primary transition-colors text-left"
-                            >
-                              <FileText className="h-3 w-3 text-primary shrink-0" />
-                              <span className="text-[11px] font-medium truncate">{meeting!.title}</span>
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <StickyNote className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <span className="text-[11px] truncate">{note!.content}</span>
+                    <div key={id}>
+                      <div
+                        className={cn(
+                          "absolute rounded-lg border px-2 py-1",
+                          isMeeting ? "bg-primary/10 border-primary/20" : "bg-accent/60 border-accent"
+                        )}
+                        style={{
+                          top: topPx,
+                          height: heightPx,
+                          left: leftOffset,
+                          width: `calc(${colWidth} - 4px)`,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div className="flex items-start justify-between h-full">
+                          <div className="min-w-0 flex-1">
+                            {isMeeting ? (
+                              <button
+                                onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting!.id}`); }}
+                                className="flex items-center gap-1 hover:text-primary transition-colors text-left"
+                              >
+                                <FileText className="h-3 w-3 text-primary shrink-0" />
+                                <span className="text-[11px] font-medium truncate">{meeting!.title}</span>
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <StickyNote className="h-3 w-3 text-muted-foreground shrink-0" />
+                                <span className="text-[11px] truncate">{note!.content}</span>
+                              </div>
+                            )}
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              {formatTimeAMPM(st)} – {formatTimeAMPM(endTimeStr(st, dur))} · {formatDurationLabel(dur)}
                             </div>
-                          )}
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
-                            {st} – {endTimeStr(st, dur)} · {formatDurationLabel(dur)}
                           </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditItem(
+                                id,
+                                isMeeting ? "meeting" : "note",
+                                st,
+                                dur,
+                                isMeeting ? meeting!.title : note!.content
+                              );
+                            }}
+                            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 shrink-0 ml-1"
+                            title="Edit"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => startEditItem(
-                            id,
-                            isMeeting ? "meeting" : "note",
-                            st,
-                            dur,
-                            isMeeting ? meeting!.title : note!.content
-                          )}
-                          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 shrink-0 ml-1"
-                          title="Edit"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
                       </div>
                       {editingItemId === id && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-1.5 mt-1 pt-1 border-t border-border/50">
-                          <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-7 text-[10px]" />
-                          <div className="flex items-center gap-1">
-                            <Select value={editStartTime} onValueChange={setEditStartTime}>
-                              <SelectTrigger className="w-20 h-7 text-[10px]"><SelectValue /></SelectTrigger>
-                              <SelectContent className="max-h-48">
-                                {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
-                              </SelectContent>
-                            </Select>
-                            <DurationInput value={editDuration} onChange={setEditDuration} className="w-20" />
-                            <Button size="sm" className="h-7 text-[10px] px-2" onClick={handleSaveEdit}>Save</Button>
+                        <div
+                          className="absolute rounded-lg border bg-card shadow-lg px-3 py-2 z-50"
+                          style={{
+                            top: topPx + heightPx + 4,
+                            left: leftOffset,
+                            width: `calc(${colWidth} - 4px)`,
+                            minWidth: 240,
+                          }}
+                        >
+                          <div className="space-y-1.5">
+                            <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-7 text-[11px]" />
+                            <div className="flex items-center gap-1">
+                              <Select value={editStartTime} onValueChange={setEditStartTime}>
+                                <SelectTrigger className="w-24 h-7 text-[10px]"><SelectValue>{formatTimeAMPM(editStartTime)}</SelectValue></SelectTrigger>
+                                <SelectContent className="max-h-48">
+                                  {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{formatTimeAMPM(t)}</SelectItem>))}
+                                </SelectContent>
+                              </Select>
+                              <DurationInput value={editDuration} onChange={setEditDuration} className="w-20" />
+                              <Button size="sm" className="h-7 text-[10px] px-2" onClick={handleSaveEdit}>Save</Button>
+                            </div>
                           </div>
-                        </motion.div>
+                        </div>
                       )}
                     </div>
                   );
