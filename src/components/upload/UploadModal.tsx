@@ -44,7 +44,6 @@ export function UploadModal({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const newFolderInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isCreatingNewFolder && newFolderInputRef.current) {
