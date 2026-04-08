@@ -589,9 +589,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-xs" placeholder="Note text" />
                         <div className="flex items-center gap-2">
                           <Select value={editStartTime} onValueChange={setEditStartTime}>
-                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue>{formatTimeAMPM(editStartTime)}</SelectValue></SelectTrigger>
                             <SelectContent className="max-h-48">
-                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{formatTimeAMPM(t)}</SelectItem>))}
                             </SelectContent>
                           </Select>
                           <DurationInput value={editDuration} onChange={setEditDuration} />
