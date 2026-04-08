@@ -60,6 +60,13 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return formatTime(h, m);
 });
 
+function formatTimeAMPM(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
 function DurationInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
   const [isCustom, setIsCustom] = useState(false);
   const [customValue, setCustomValue] = useState(value);
