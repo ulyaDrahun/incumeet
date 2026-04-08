@@ -101,7 +101,7 @@ export default function MeetingDetail() {
 
   const generateEmailBody = () => {
     if (!meeting.summary) return "";
-    return `Hi,\n\nHere's a summary of our meeting: ${meeting.title}\n\nSUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}\n\nBest regards`;
+    return `Hi,\n\nHere's a summary of our meeting: ${meeting.title}\n\nSUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${(meeting.summary.keyDecisions || []).map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}\n\nBest regards`;
   };
 
   const generateEmailHtml = () => {
