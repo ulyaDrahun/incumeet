@@ -293,7 +293,7 @@ export default function MeetingDetail() {
                       <Textarea value={editedSummary?.keyDecisions.join("\n") || ""} onChange={(e) => setEditedSummary({ ...editedSummary!, keyDecisions: e.target.value.split("\n").filter(Boolean) })} placeholder="One decision per line" className="min-h-[120px]" />
                     ) : (
                       <ul className="space-y-2">
-                        {meeting.summary.keyDecisions.map((decision, i) => (
+                        {(meeting.summary.keyDecisions || []).map((decision, i) => (
                           <li key={i} className="flex items-start gap-3">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
                             <span className="text-foreground">{decision}</span>
