@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Plus, FileText, StickyNote, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, FileText, StickyNote, Clock, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +19,7 @@ interface CalendarViewProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const HOUR_HEIGHT = 60; // px per hour
+const HOUR_HEIGHT = 60;
 
 function formatTime(hour: number, minute: number = 0) {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
@@ -60,7 +60,6 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return formatTime(h, m);
 });
 
-// Editable duration component: click to type custom, or use dropdown
 function DurationInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
   const [isCustom, setIsCustom] = useState(false);
   const [customValue, setCustomValue] = useState(value);
@@ -93,16 +92,19 @@ function DurationInput({ value, onChange, className }: { value: string; onChange
     );
   }
 
+  const isPreset = DURATION_OPTIONS.some(d => d.value === value);
+  const displayLabel = isPreset
+    ? undefined
+    : `${value} min`;
+
   return (
     <div className="flex items-center gap-1">
-      <Select value={DURATION_OPTIONS.some(d => d.value === value) ? value : "custom"} onValueChange={(v) => {
+      <Select value={isPreset ? value : "custom"} onValueChange={(v) => {
         if (v === "custom") { setCustomValue(value); setIsCustom(true); }
         else onChange(v);
       }}>
-        <SelectTrigger className={cn("h-8 text-xs w-28", className)} onClick={(e) => {
-          // If user clicks directly on the trigger text area (not the chevron), allow custom input
-        }}>
-          <SelectValue placeholder="Duration" />
+        <SelectTrigger className={cn("h-8 text-xs w-28", className)}>
+          {isPreset ? <SelectValue placeholder="Duration" /> : <span>{displayLabel}</span>}
         </SelectTrigger>
         <SelectContent>
           {DURATION_OPTIONS.map(d => (<SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>))}
@@ -127,6 +129,68 @@ function formatDurationLabel(mins: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+// Compute overlap columns for timeline items
+type TimelineItem = { type: "meeting"; data: Meeting } | { type: "note"; data: CalendarNote };
+
+function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number; totalCols: number }> {
+  const result = new Map<string, { col: number; totalCols: number }>();
+  if (items.length === 0) return result;
+
+  // Get start/end in minutes for each item
+  const ranges = items.map(item => {
+    const st = item.type === "meeting" ? (item.data as Meeting).startTime! : (item.data as CalendarNote).startTime!;
+    const dur = item.type === "meeting" ? ((item.data as Meeting).duration || 60) : ((item.data as CalendarNote).duration || 30);
+    const startMin = parseTime(st);
+    return { id: item.data.id, start: startMin, end: startMin + dur };
+  });
+
+  // Sort by start time
+  ranges.sort((a, b) => a.start - b.start);
+
+  // Greedy column assignment
+  const columns: { id: string; end: number }[][] = [];
+  for (const r of ranges) {
+    let placed = false;
+    for (let c = 0; c < columns.length; c++) {
+      // Check if this column is free (last item in column ends before this starts)
+      const lastInCol = columns[c][columns[c].length - 1];
+      if (lastInCol.end <= r.start) {
+        columns[c].push({ id: r.id, end: r.end });
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      columns.push([{ id: r.id, end: r.end }]);
+    }
+  }
+
+  // Find overlapping groups to determine totalCols per item
+  // For simplicity, find connected overlap groups
+  const idToCol = new Map<string, number>();
+  columns.forEach((col, colIdx) => {
+    col.forEach(item => idToCol.set(item.id, colIdx));
+  });
+
+  // For each item, find how many columns overlap with it
+  const rangeMap = new Map(ranges.map(r => [r.id, r]));
+  for (const r of ranges) {
+    const col = idToCol.get(r.id)!;
+    // Find all items that overlap with this one
+    const overlapping = new Set<number>();
+    overlapping.add(col);
+    for (const other of ranges) {
+      if (other.id === r.id) continue;
+      if (other.start < r.end && other.end > r.start) {
+        overlapping.add(idToCol.get(other.id)!);
+      }
+    }
+    result.set(r.id, { col, totalCols: overlapping.size });
+  }
+
+  return result;
+}
+
 export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewProps) {
   const navigate = useNavigate();
   const { folders, meetings, updateMeeting, updateCalendarNote } = useFolders();
@@ -140,10 +204,11 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [duration, setDuration] = useState("60");
-  const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
-  const [editingNoteTimeId, setEditingNoteTimeId] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editStartTime, setEditStartTime] = useState("09:00");
   const [editDuration, setEditDuration] = useState("60");
+  const [editName, setEditName] = useState("");
+  const [editingItemType, setEditingItemType] = useState<"meeting" | "note">("meeting");
   const [includeNoteTime, setIncludeNoteTime] = useState(false);
   const [noteStartTime, setNoteStartTime] = useState("09:00");
   const [noteDuration, setNoteDuration] = useState("30");
@@ -163,22 +228,39 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const getNotesForDate = (date: Date) => notes.filter(n => isSameDay(n.date, date));
-  const getMeetingsForDate = (date: Date) => {
-    return meetings
-      .filter(m => isSameDay(m.meetingDate, date))
-      .sort((a, b) => {
-        const aTime = a.startTime ? parseTime(a.startTime) : 9999;
-        const bTime = b.startTime ? parseTime(b.startTime) : 9999;
-        return aTime - bTime;
-      });
+  const getMeetingsForDate = (date: Date) =>
+    meetings.filter(m => isSameDay(m.meetingDate, date));
+
+  // Sort items for the calendar grid cells: unscheduled first, then by time
+  const getSortedItemsForDate = (date: Date) => {
+    const dm = getMeetingsForDate(date);
+    const dn = getNotesForDate(date);
+    type GridItem = { type: "meeting"; data: Meeting } | { type: "note"; data: CalendarNote };
+    const items: GridItem[] = [
+      ...dm.map(m => ({ type: "meeting" as const, data: m })),
+      ...dn.map(n => ({ type: "note" as const, data: n })),
+    ];
+    items.sort((a, b) => {
+      const aTime = a.type === "meeting"
+        ? ((a.data as Meeting).startTime ? parseTime((a.data as Meeting).startTime!) : -1)
+        : ((a.data as CalendarNote).startTime ? parseTime((a.data as CalendarNote).startTime!) : -1);
+      const bTime = b.type === "meeting"
+        ? ((b.data as Meeting).startTime ? parseTime((b.data as Meeting).startTime!) : -1)
+        : ((b.data as CalendarNote).startTime ? parseTime((b.data as CalendarNote).startTime!) : -1);
+      // Unscheduled (-1) first, then by time ascending
+      if (aTime === -1 && bTime === -1) return 0;
+      if (aTime === -1) return -1;
+      if (bTime === -1) return 1;
+      return aTime - bTime;
+    });
+    return items;
   };
 
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
     setShowDayDetail(true);
     setShowAddForm(false);
-    setEditingTimeId(null);
-    setEditingNoteTimeId(null);
+    setEditingItemId(null);
   };
 
   const handleAddClick = (e: React.MouseEvent, date: Date) => {
@@ -187,8 +269,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setShowDayDetail(true);
     setShowAddForm(true);
     setAddType("note");
-    setEditingTimeId(null);
-    setEditingNoteTimeId(null);
+    setEditingItemId(null);
     setIncludeNoteTime(false);
   };
 
@@ -210,29 +291,35 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setNoteDuration("30");
   };
 
-  const handleSaveTime = (meeting: Meeting) => {
-    if (updateMeeting) {
-      updateMeeting(meeting.id, {
-        startTime: editStartTime,
-        duration: parseInt(editDuration),
-      });
-    }
-    setEditingTimeId(null);
+  const startEditItem = (id: string, type: "meeting" | "note", st: string, dur: number, name: string) => {
+    setEditingItemId(editingItemId === id ? null : id);
+    setEditingItemType(type);
+    setEditStartTime(st || "09:00");
+    setEditDuration(String(dur));
+    setEditName(name);
   };
 
-  const handleSaveNoteTime = (note: CalendarNote) => {
-    updateCalendarNote(note.id, {
-      startTime: editStartTime,
-      duration: parseInt(editDuration),
-    });
-    setEditingNoteTimeId(null);
+  const handleSaveEdit = () => {
+    if (!editingItemId) return;
+    if (editingItemType === "meeting" && updateMeeting) {
+      updateMeeting(editingItemId, {
+        startTime: editStartTime,
+        duration: parseInt(editDuration),
+        title: editName,
+      });
+    } else {
+      updateCalendarNote(editingItemId, {
+        startTime: editStartTime,
+        duration: parseInt(editDuration),
+        content: editName,
+      });
+    }
+    setEditingItemId(null);
   };
 
   const dayNotes = selectedDate ? getNotesForDate(selectedDate) : [];
   const dayMeetings = selectedDate ? getMeetingsForDate(selectedDate) : [];
 
-  // Combine scheduled meetings and notes for timeline
-  type TimelineItem = { type: "meeting"; data: Meeting } | { type: "note"; data: CalendarNote };
   const scheduledMeetings = dayMeetings.filter(m => m.startTime);
   const unscheduledMeetings = dayMeetings.filter(m => !m.startTime);
   const scheduledNotes = dayNotes.filter(n => n.startTime);
@@ -246,6 +333,8 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     const bTime = b.type === "meeting" ? parseTime((b.data as Meeting).startTime!) : parseTime((b.data as CalendarNote).startTime!);
     return aTime - bTime;
   });
+
+  const overlapMap = computeOverlapColumns(timelineItems);
 
   return (
     <div className="p-4">
@@ -276,11 +365,10 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
         ))}
       </div>
 
-      {/* Calendar grid */}
+      {/* Calendar grid - sorted by time */}
       <div className="grid grid-cols-7 border-l border-border">
         {days.map((dayDate, idx) => {
-          const dn = getNotesForDate(dayDate);
-          const dm = getMeetingsForDate(dayDate);
+          const sortedItems = getSortedItemsForDate(dayDate);
           const isCurrentMonth = isSameMonth(dayDate, currentMonth);
           const isToday = isSameDay(dayDate, new Date());
 
@@ -313,27 +401,36 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
               </div>
 
               <div className="mt-1 space-y-0.5 overflow-hidden">
-                {dm.slice(0, 2).map((meeting) => (
-                  <div key={meeting.id} className="text-[11px] px-1.5 py-0.5 bg-primary/10 text-primary rounded truncate">
-                    {meeting.startTime && (
-                      <span className="font-medium mr-1">{meeting.startTime}</span>
-                    )}
-                    <FileText className="h-2.5 w-2.5 inline mr-0.5" />
-                    {meeting.title}
-                  </div>
-                ))}
-                {dn.slice(0, 2).map((note) => (
-                  <div key={note.id} className="text-[11px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded truncate">
-                    {note.startTime && (
-                      <span className="font-medium mr-1">{note.startTime}</span>
-                    )}
-                    <StickyNote className="h-2.5 w-2.5 inline mr-0.5" />
-                    {note.content}
-                  </div>
-                ))}
-                {(dm.length + dn.length > 2) && (
+                {sortedItems.slice(0, 3).map((item) => {
+                  const isMeeting = item.type === "meeting";
+                  const meeting = isMeeting ? item.data as Meeting : null;
+                  const note = !isMeeting ? item.data as CalendarNote : null;
+                  const st = isMeeting ? meeting!.startTime : note!.startTime;
+
+                  return (
+                    <div
+                      key={item.data.id}
+                      className={cn(
+                        "text-[11px] px-1.5 py-0.5 rounded truncate",
+                        isMeeting ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {st ? (
+                        <span className="font-medium mr-1">{st}</span>
+                      ) : (
+                        <span className="font-medium mr-1 italic text-[10px]">unsched.</span>
+                      )}
+                      {isMeeting ? (
+                        <><FileText className="h-2.5 w-2.5 inline mr-0.5" />{meeting!.title}</>
+                      ) : (
+                        <><StickyNote className="h-2.5 w-2.5 inline mr-0.5" />{note!.content}</>
+                      )}
+                    </div>
+                  );
+                })}
+                {sortedItems.length > 3 && (
                   <span className="text-[10px] text-muted-foreground px-1.5">
-                    +{dm.length + dn.length - 2} more
+                    +{sortedItems.length - 3} more
                   </span>
                 )}
               </div>
@@ -342,7 +439,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
         })}
       </div>
 
-      {/* Day Detail Popup - Timeline style */}
+      {/* Day Detail Popup */}
       <Dialog open={showDayDetail} onOpenChange={setShowDayDetail}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
@@ -357,7 +454,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto space-y-4 py-2">
-            {/* Add form at top when open */}
+            {/* Add form */}
             {showAddForm && (
               <div className="space-y-3 border-b border-border pb-4">
                 <div className="flex gap-2">
@@ -428,7 +525,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
               </div>
             )}
 
-            {/* Unscheduled meetings at top */}
+            {/* Unscheduled items */}
             {(unscheduledMeetings.length > 0 || unscheduledNotes.length > 0) && (
               <div className="border-b border-border pb-3">
                 <h4 className="text-xs font-medium text-muted-foreground mb-2">Unscheduled</h4>
@@ -443,26 +540,25 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <span className="text-sm font-medium">{meeting.title}</span>
                       </button>
                       <button
-                        onClick={() => {
-                          setEditingTimeId(editingTimeId === meeting.id ? null : meeting.id);
-                          setEditStartTime("09:00");
-                          setEditDuration(String(meeting.duration || 60));
-                        }}
+                        onClick={() => startEditItem(meeting.id, "meeting", "", meeting.duration || 60, meeting.title)}
                         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                       >
                         <Clock className="h-3 w-3" /> Set time
                       </button>
                     </div>
-                    {editingTimeId === meeting.id && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                        <Select value={editStartTime} onValueChange={setEditStartTime}>
-                          <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent className="max-h-48">
-                            {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
-                          </SelectContent>
-                        </Select>
-                        <DurationInput value={editDuration} onChange={setEditDuration} />
-                        <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveTime(meeting)}>Save</Button>
+                    {editingItemId === meeting.id && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2 mt-2 pt-2 border-t border-border/50">
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-xs" placeholder="Meeting name" />
+                        <div className="flex items-center gap-2">
+                          <Select value={editStartTime} onValueChange={setEditStartTime}>
+                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent className="max-h-48">
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                          <DurationInput value={editDuration} onChange={setEditDuration} />
+                          <Button size="sm" className="h-8 text-xs" onClick={handleSaveEdit}>Save</Button>
+                        </div>
                       </motion.div>
                     )}
                   </div>
@@ -475,26 +571,25 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                         <span className="text-sm">{note.content}</span>
                       </div>
                       <button
-                        onClick={() => {
-                          setEditingNoteTimeId(editingNoteTimeId === note.id ? null : note.id);
-                          setEditStartTime("09:00");
-                          setEditDuration(String(note.duration || 30));
-                        }}
+                        onClick={() => startEditItem(note.id, "note", "", note.duration || 30, note.content)}
                         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                       >
                         <Clock className="h-3 w-3" /> Set time
                       </button>
                     </div>
-                    {editingNoteTimeId === note.id && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                        <Select value={editStartTime} onValueChange={setEditStartTime}>
-                          <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent className="max-h-48">
-                            {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
-                          </SelectContent>
-                        </Select>
-                        <DurationInput value={editDuration} onChange={setEditDuration} />
-                        <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveNoteTime(note)}>Save</Button>
+                    {editingItemId === note.id && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2 mt-2 pt-2 border-t border-border/50">
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-xs" placeholder="Note text" />
+                        <div className="flex items-center gap-2">
+                          <Select value={editStartTime} onValueChange={setEditStartTime}>
+                            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent className="max-h-48">
+                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                          <DurationInput value={editDuration} onChange={setEditDuration} />
+                          <Button size="sm" className="h-8 text-xs" onClick={handleSaveEdit}>Save</Button>
+                        </div>
                       </motion.div>
                     )}
                   </div>
@@ -502,7 +597,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
               </div>
             )}
 
-            {/* Full day timeline with proportional blocks */}
+            {/* Full day timeline with overlapping support */}
             <div className="relative">
               <h4 className="text-xs font-medium text-muted-foreground mb-2">Daily Timeline</h4>
               <div className="relative" style={{ height: HOURS.length * HOUR_HEIGHT }}>
@@ -522,78 +617,84 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   </div>
                 ))}
 
-                {/* Positioned timeline items */}
+                {/* Positioned timeline items with overlap columns */}
                 {timelineItems.map((item) => {
                   const st = item.type === "meeting" ? (item.data as Meeting).startTime! : (item.data as CalendarNote).startTime!;
                   const dur = item.type === "meeting" ? ((item.data as Meeting).duration || 60) : ((item.data as CalendarNote).duration || 30);
                   const startMin = parseTime(st);
                   const topPx = (startMin / 60) * HOUR_HEIGHT;
-                  const heightPx = Math.max((dur / 60) * HOUR_HEIGHT, 28); // minimum 28px
+                  const heightPx = Math.max((dur / 60) * HOUR_HEIGHT, 28);
                   const id = item.data.id;
                   const isMeeting = item.type === "meeting";
                   const meeting = isMeeting ? item.data as Meeting : null;
                   const note = !isMeeting ? item.data as CalendarNote : null;
 
+                  const overlap = overlapMap.get(id) || { col: 0, totalCols: 1 };
+                  const availableWidth = `calc(100% - 76px)`; // right area after hour labels
+                  const colWidth = `calc(${availableWidth} / ${overlap.totalCols})`;
+                  const leftOffset = `calc(68px + (${availableWidth} / ${overlap.totalCols}) * ${overlap.col})`;
+
                   return (
                     <div
                       key={id}
                       className={cn(
-                        "absolute left-[68px] right-2 rounded-lg border px-3 py-1.5 overflow-hidden",
+                        "absolute rounded-lg border px-2 py-1 overflow-hidden",
                         isMeeting ? "bg-primary/10 border-primary/20" : "bg-accent/60 border-accent"
                       )}
-                      style={{ top: topPx, height: heightPx }}
+                      style={{
+                        top: topPx,
+                        height: heightPx,
+                        left: leftOffset,
+                        width: `calc(${colWidth} - 4px)`,
+                      }}
                     >
                       <div className="flex items-start justify-between h-full">
                         <div className="min-w-0 flex-1">
                           {isMeeting ? (
                             <button
                               onClick={() => { setShowDayDetail(false); navigate(`/meeting/${meeting!.id}`); }}
-                              className="flex items-center gap-1.5 hover:text-primary transition-colors text-left"
+                              className="flex items-center gap-1 hover:text-primary transition-colors text-left"
                             >
-                              <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                              <span className="text-xs font-medium truncate">{meeting!.title}</span>
+                              <FileText className="h-3 w-3 text-primary shrink-0" />
+                              <span className="text-[11px] font-medium truncate">{meeting!.title}</span>
                             </button>
                           ) : (
-                            <div className="flex items-center gap-1.5">
-                              <StickyNote className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span className="text-xs truncate">{note!.content}</span>
+                            <div className="flex items-center gap-1">
+                              <StickyNote className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="text-[11px] truncate">{note!.content}</span>
                             </div>
                           )}
                           <div className="text-[10px] text-muted-foreground mt-0.5">
                             {st} – {endTimeStr(st, dur)} · {formatDurationLabel(dur)}
-                            {isMeeting && meeting && <span> · {folders.find(f => f.id === meeting.folderId)?.name}</span>}
                           </div>
                         </div>
                         <button
-                          onClick={() => {
-                            if (isMeeting) {
-                              setEditingTimeId(editingTimeId === id ? null : id);
-                              setEditingNoteTimeId(null);
-                            } else {
-                              setEditingNoteTimeId(editingNoteTimeId === id ? null : id);
-                              setEditingTimeId(null);
-                            }
-                            setEditStartTime(st);
-                            setEditDuration(String(dur));
-                          }}
+                          onClick={() => startEditItem(
+                            id,
+                            isMeeting ? "meeting" : "note",
+                            st,
+                            dur,
+                            isMeeting ? meeting!.title : note!.content
+                          )}
                           className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 shrink-0 ml-1"
+                          title="Edit"
                         >
-                          <Clock className="h-3 w-3" />
+                          <Pencil className="h-3 w-3" />
                         </button>
                       </div>
-                      {((isMeeting && editingTimeId === id) || (!isMeeting && editingNoteTimeId === id)) && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 mt-1 pt-1 border-t border-border/50">
-                          <Select value={editStartTime} onValueChange={setEditStartTime}>
-                            <SelectTrigger className="w-24 h-7 text-[10px]"><SelectValue /></SelectTrigger>
-                            <SelectContent className="max-h-48">
-                              {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
-                          <DurationInput value={editDuration} onChange={setEditDuration} className="w-24" />
-                          <Button size="sm" className="h-7 text-[10px] px-2" onClick={() => {
-                            if (isMeeting) handleSaveTime(meeting!);
-                            else handleSaveNoteTime(note!);
-                          }}>Save</Button>
+                      {editingItemId === id && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-1.5 mt-1 pt-1 border-t border-border/50">
+                          <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-7 text-[10px]" />
+                          <div className="flex items-center gap-1">
+                            <Select value={editStartTime} onValueChange={setEditStartTime}>
+                              <SelectTrigger className="w-20 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                              <SelectContent className="max-h-48">
+                                {TIME_OPTIONS.map(t => (<SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>))}
+                              </SelectContent>
+                            </Select>
+                            <DurationInput value={editDuration} onChange={setEditDuration} className="w-20" />
+                            <Button size="sm" className="h-7 text-[10px] px-2" onClick={handleSaveEdit}>Save</Button>
+                          </div>
                         </motion.div>
                       )}
                     </div>
