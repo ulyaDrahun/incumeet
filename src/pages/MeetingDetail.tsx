@@ -129,7 +129,7 @@ export default function MeetingDetail() {
 
   const copyToClipboard = () => {
     if (!meeting.summary) return;
-    const text = `SUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${meeting.summary.keyDecisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}`;
+    const text = `SUMMARY\n${meeting.summary.shortSummary}\n\nKEY DECISIONS\n${(meeting.summary.keyDecisions || []).map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS\n${formatActionItemsForText()}`;
     navigator.clipboard.writeText(text);
     toast({ title: "Copied to clipboard" });
   };
