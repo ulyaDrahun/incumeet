@@ -13,7 +13,7 @@ import { useFolders } from "@/contexts/FoldersContext";
 import type { Folder } from "@/types";
 import { format } from "date-fns";
 
-type UploadType = "text" | "audio" | "video";
+type UploadType = "text";
 
 interface UploadModalProps {
   open: boolean;
@@ -21,27 +21,6 @@ interface UploadModalProps {
   folders: Folder[];
   defaultFolderId?: string;
 }
-
-const uploadOptions = [
-  {
-    type: "text" as UploadType,
-    icon: FileText,
-    label: "Text Transcript",
-    description: "Paste your meeting transcript",
-  },
-  {
-    type: "audio" as UploadType,
-    icon: Mic,
-    label: "Audio File",
-    description: "Upload an audio recording",
-  },
-  {
-    type: "video" as UploadType,
-    icon: Video,
-    label: "Video Link",
-    description: "Paste a video URL",
-  },
-];
 
 export function UploadModal({
   open,
