@@ -77,13 +77,6 @@ export function UploadModal({
     }
   };
 
-  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAudioFile(file);
-      setContent(file.name);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!title.trim() || !selectedType) {
