@@ -448,9 +448,9 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
 
       {/* Day Detail Popup */}
       <Dialog open={showDayDetail} onOpenChange={setShowDayDetail}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col pr-10">
           <DialogHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pr-4">
               <DialogTitle>
                 {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : ""}
               </DialogTitle>
