@@ -313,7 +313,7 @@ export default function MeetingDetail() {
                       />
                     ) : (
                       <div className="space-y-4">
-                        {meeting.summary.actionItems.map((group, groupIdx) => (
+                        {(meeting.summary.actionItems || []).map((group, groupIdx) => (
                           <div key={groupIdx}>
                             <h3 className="font-semibold text-foreground mb-2">{group.person}</h3>
                             <ul className="space-y-2 ml-4">
