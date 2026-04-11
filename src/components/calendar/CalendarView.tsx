@@ -136,14 +136,13 @@ function formatDurationLabel(mins: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// Compute overlap columns for timeline items
+// Compute overlap columns for timeline items — always shows ALL overlapping items
 type TimelineItem = { type: "meeting"; data: Meeting } | { type: "note"; data: CalendarNote };
 
 function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number; totalCols: number }> {
   const result = new Map<string, { col: number; totalCols: number }>();
   if (items.length === 0) return result;
 
-  // Get start/end in minutes for each item
   const ranges = items.map(item => {
     const st = item.type === "meeting" ? (item.data as Meeting).startTime! : (item.data as CalendarNote).startTime!;
     const dur = item.type === "meeting" ? ((item.data as Meeting).duration || 60) : ((item.data as CalendarNote).duration || 30);
@@ -151,7 +150,6 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
     return { id: item.data.id, start: startMin, end: startMin + dur };
   });
 
-  // Sort by start time
   ranges.sort((a, b) => a.start - b.start);
 
   // Greedy column assignment
@@ -159,7 +157,6 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
   for (const r of ranges) {
     let placed = false;
     for (let c = 0; c < columns.length; c++) {
-      // Check if this column is free (last item in column ends before this starts)
       const lastInCol = columns[c][columns[c].length - 1];
       if (lastInCol.end <= r.start) {
         columns[c].push({ id: r.id, end: r.end });
@@ -172,27 +169,37 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
     }
   }
 
-  // Find overlapping groups to determine totalCols per item
-  // For simplicity, find connected overlap groups
   const idToCol = new Map<string, number>();
   columns.forEach((col, colIdx) => {
     col.forEach(item => idToCol.set(item.id, colIdx));
   });
 
-  // For each item, find how many columns overlap with it
-  const rangeMap = new Map(ranges.map(r => [r.id, r]));
+  // For each item, find the MAX number of simultaneous overlaps in its time range
   for (const r of ranges) {
     const col = idToCol.get(r.id)!;
-    // Find all items that overlap with this one
-    const overlapping = new Set<number>();
-    overlapping.add(col);
+    const overlappingCols = new Set<number>();
+    overlappingCols.add(col);
     for (const other of ranges) {
       if (other.id === r.id) continue;
       if (other.start < r.end && other.end > r.start) {
-        overlapping.add(idToCol.get(other.id)!);
+        overlappingCols.add(idToCol.get(other.id)!);
       }
     }
-    result.set(r.id, { col, totalCols: overlapping.size });
+    result.set(r.id, { col, totalCols: Math.max(overlappingCols.size, columns.length > 0 ? Math.max(...Array.from(overlappingCols)) + 1 : 1) });
+  }
+
+  // Normalize: for each overlap group, totalCols should be the max col + 1 among the group
+  // Re-pass to ensure totalCols is consistent within overlap groups
+  for (const r of ranges) {
+    const col = idToCol.get(r.id)!;
+    let maxTotalCols = result.get(r.id)!.totalCols;
+    for (const other of ranges) {
+      if (other.id === r.id) continue;
+      if (other.start < r.end && other.end > r.start) {
+        maxTotalCols = Math.max(maxTotalCols, result.get(other.id)!.totalCols);
+      }
+    }
+    result.set(r.id, { col, totalCols: maxTotalCols });
   }
 
   return result;
@@ -219,6 +226,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const [includeNoteTime, setIncludeNoteTime] = useState(false);
   const [noteStartTime, setNoteStartTime] = useState("09:00");
   const [noteDuration, setNoteDuration] = useState("30");
+  const [folderError, setFolderError] = useState(false);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -284,8 +292,14 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     if (!selectedDate) return;
     if (addType === "note" && noteContent.trim()) {
       onAddNote(selectedDate, noteContent.trim(), includeNoteTime ? noteStartTime : undefined, includeNoteTime ? parseInt(noteDuration) : undefined);
-    } else if (addType === "meeting" && meetingTitle.trim() && selectedFolderId) {
-      onAddMeeting(selectedDate, meetingTitle.trim(), selectedFolderId, startTime, parseInt(duration));
+    } else if (addType === "meeting") {
+      if (!selectedFolderId) {
+        setFolderError(true);
+        return;
+      }
+      if (meetingTitle.trim()) {
+        onAddMeeting(selectedDate, meetingTitle.trim(), selectedFolderId, startTime, parseInt(duration));
+      }
     }
     setShowAddForm(false);
     setNoteContent("");
@@ -296,6 +310,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setIncludeNoteTime(false);
     setNoteStartTime("09:00");
     setNoteDuration("30");
+    setFolderError(false);
   };
 
   const startEditItem = (id: string, type: "meeting" | "note", st: string, dur: number, name: string) => {
@@ -384,7 +399,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
               key={idx}
               onClick={() => handleDayClick(dayDate)}
               className={cn(
-                "min-h-[120px] p-1.5 border-r border-b border-border cursor-pointer transition-colors relative group",
+                "min-h-[120px] p-1.5 border-r border-b border-border cursor-pointer transition-colors relative group min-w-[140px]",
                 isCurrentMonth ? "bg-card" : "bg-muted/30",
                 isToday && "bg-primary/5",
                 "hover:bg-accent/50"
@@ -414,26 +429,24 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   const note = !isMeeting ? item.data as CalendarNote : null;
                   const st = isMeeting ? meeting!.startTime : note!.startTime;
 
-                  return (
-                    <div
-                      key={item.data.id}
-                      className={cn(
-                        "text-[11px] px-1.5 py-0.5 rounded truncate",
-                        isMeeting ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {st ? (
-                        <span className="font-medium mr-1">{formatTimeAMPM(st)}</span>
-                      ) : (
-                        <span className="font-medium mr-1 italic text-[10px]">unsched.</span>
-                      )}
-                      {isMeeting ? (
-                        <><FileText className="h-2.5 w-2.5 inline mr-0.5" />{meeting!.title}</>
-                      ) : (
-                        <><StickyNote className="h-2.5 w-2.5 inline mr-0.5" />{note!.content}</>
-                      )}
-                    </div>
-                  );
+                    return (
+                      <div
+                        key={item.data.id}
+                        className={cn(
+                          "text-[11px] px-1.5 py-0.5 rounded truncate",
+                          isMeeting ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {st && (
+                          <span className="font-medium mr-1">{formatTimeAMPM(st)}</span>
+                        )}
+                        {isMeeting ? (
+                          <><FileText className="h-2.5 w-2.5 inline mr-0.5" />{meeting!.title}</>
+                        ) : (
+                          <><StickyNote className="h-2.5 w-2.5 inline mr-0.5" />{note!.content}</>
+                        )}
+                      </div>
+                    );
                 })}
                 {sortedItems.length > 3 && (
                   <span className="text-[10px] text-muted-foreground px-1.5">
@@ -448,7 +461,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
 
       {/* Day Detail Popup */}
       <Dialog open={showDayDetail} onOpenChange={setShowDayDetail}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col pr-10">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden flex flex-col pr-12">
           <DialogHeader>
             <div className="flex items-center justify-between pr-4">
               <DialogTitle>
@@ -499,14 +512,15 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   ) : (
                     <motion.div key="meeting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
                       <Input placeholder="Meeting title" value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} autoFocus />
-                      <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                        <SelectTrigger><SelectValue placeholder="Select a folder (required)" /></SelectTrigger>
+                      <Select value={selectedFolderId} onValueChange={(v) => { setSelectedFolderId(v); setFolderError(false); }}>
+                        <SelectTrigger className={cn(folderError && "border-destructive")}><SelectValue placeholder="Select a folder (required)" /></SelectTrigger>
                         <SelectContent>
                           {folders.map((folder) => (
                             <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {folderError && <p className="text-xs text-destructive">Please select a folder before adding the meeting.</p>}
                       <div className="flex gap-2">
                         <div className="flex-1">
                           <label className="text-xs text-muted-foreground mb-1 block">Start time</label>

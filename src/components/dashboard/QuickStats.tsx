@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Folder, FileText, Star, Pin } from "lucide-react";
+import { Folder, FileText } from "lucide-react";
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -33,18 +33,14 @@ function StatCard({ icon, label, value, color }: StatCardProps) {
 interface QuickStatsProps {
   folderCount: number;
   meetingCount: number;
-  starredCount: number;
-  pinnedCount: number;
 }
 
 export function QuickStats({
   folderCount,
   meetingCount,
-  starredCount,
-  pinnedCount,
 }: QuickStatsProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-4">
       <StatCard
         icon={<Folder className="h-5 w-5 text-primary" />}
         label="Folders"
@@ -53,21 +49,9 @@ export function QuickStats({
       />
       <StatCard
         icon={<FileText className="h-5 w-5 text-success" />}
-        label="Meetings"
+        label="Total Meetings"
         value={meetingCount}
         color="bg-success/10"
-      />
-      <StatCard
-        icon={<Star className="h-5 w-5 text-starred" />}
-        label="Starred"
-        value={starredCount}
-        color="bg-starred/10"
-      />
-      <StatCard
-        icon={<Pin className="h-5 w-5 text-pinned" />}
-        label="Pinned"
-        value={pinnedCount}
-        color="bg-pinned/10"
       />
     </div>
   );
