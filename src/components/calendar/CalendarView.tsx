@@ -136,14 +136,13 @@ function formatDurationLabel(mins: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// Compute overlap columns for timeline items
+// Compute overlap columns for timeline items — always shows ALL overlapping items
 type TimelineItem = { type: "meeting"; data: Meeting } | { type: "note"; data: CalendarNote };
 
 function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number; totalCols: number }> {
   const result = new Map<string, { col: number; totalCols: number }>();
   if (items.length === 0) return result;
 
-  // Get start/end in minutes for each item
   const ranges = items.map(item => {
     const st = item.type === "meeting" ? (item.data as Meeting).startTime! : (item.data as CalendarNote).startTime!;
     const dur = item.type === "meeting" ? ((item.data as Meeting).duration || 60) : ((item.data as CalendarNote).duration || 30);
@@ -151,7 +150,6 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
     return { id: item.data.id, start: startMin, end: startMin + dur };
   });
 
-  // Sort by start time
   ranges.sort((a, b) => a.start - b.start);
 
   // Greedy column assignment
@@ -159,7 +157,6 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
   for (const r of ranges) {
     let placed = false;
     for (let c = 0; c < columns.length; c++) {
-      // Check if this column is free (last item in column ends before this starts)
       const lastInCol = columns[c][columns[c].length - 1];
       if (lastInCol.end <= r.start) {
         columns[c].push({ id: r.id, end: r.end });
@@ -172,27 +169,37 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
     }
   }
 
-  // Find overlapping groups to determine totalCols per item
-  // For simplicity, find connected overlap groups
   const idToCol = new Map<string, number>();
   columns.forEach((col, colIdx) => {
     col.forEach(item => idToCol.set(item.id, colIdx));
   });
 
-  // For each item, find how many columns overlap with it
-  const rangeMap = new Map(ranges.map(r => [r.id, r]));
+  // For each item, find the MAX number of simultaneous overlaps in its time range
   for (const r of ranges) {
     const col = idToCol.get(r.id)!;
-    // Find all items that overlap with this one
-    const overlapping = new Set<number>();
-    overlapping.add(col);
+    const overlappingCols = new Set<number>();
+    overlappingCols.add(col);
     for (const other of ranges) {
       if (other.id === r.id) continue;
       if (other.start < r.end && other.end > r.start) {
-        overlapping.add(idToCol.get(other.id)!);
+        overlappingCols.add(idToCol.get(other.id)!);
       }
     }
-    result.set(r.id, { col, totalCols: overlapping.size });
+    result.set(r.id, { col, totalCols: Math.max(overlappingCols.size, columns.length > 0 ? Math.max(...Array.from(overlappingCols)) + 1 : 1) });
+  }
+
+  // Normalize: for each overlap group, totalCols should be the max col + 1 among the group
+  // Re-pass to ensure totalCols is consistent within overlap groups
+  for (const r of ranges) {
+    const col = idToCol.get(r.id)!;
+    let maxTotalCols = result.get(r.id)!.totalCols;
+    for (const other of ranges) {
+      if (other.id === r.id) continue;
+      if (other.start < r.end && other.end > r.start) {
+        maxTotalCols = Math.max(maxTotalCols, result.get(other.id)!.totalCols);
+      }
+    }
+    result.set(r.id, { col, totalCols: maxTotalCols });
   }
 
   return result;
@@ -219,6 +226,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const [includeNoteTime, setIncludeNoteTime] = useState(false);
   const [noteStartTime, setNoteStartTime] = useState("09:00");
   const [noteDuration, setNoteDuration] = useState("30");
+  const [folderError, setFolderError] = useState(false);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -284,8 +292,14 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     if (!selectedDate) return;
     if (addType === "note" && noteContent.trim()) {
       onAddNote(selectedDate, noteContent.trim(), includeNoteTime ? noteStartTime : undefined, includeNoteTime ? parseInt(noteDuration) : undefined);
-    } else if (addType === "meeting" && meetingTitle.trim() && selectedFolderId) {
-      onAddMeeting(selectedDate, meetingTitle.trim(), selectedFolderId, startTime, parseInt(duration));
+    } else if (addType === "meeting") {
+      if (!selectedFolderId) {
+        setFolderError(true);
+        return;
+      }
+      if (meetingTitle.trim()) {
+        onAddMeeting(selectedDate, meetingTitle.trim(), selectedFolderId, startTime, parseInt(duration));
+      }
     }
     setShowAddForm(false);
     setNoteContent("");
@@ -296,6 +310,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setIncludeNoteTime(false);
     setNoteStartTime("09:00");
     setNoteDuration("30");
+    setFolderError(false);
   };
 
   const startEditItem = (id: string, type: "meeting" | "note", st: string, dur: number, name: string) => {
