@@ -429,26 +429,24 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   const note = !isMeeting ? item.data as CalendarNote : null;
                   const st = isMeeting ? meeting!.startTime : note!.startTime;
 
-                  return (
-                    <div
-                      key={item.data.id}
-                      className={cn(
-                        "text-[11px] px-1.5 py-0.5 rounded truncate",
-                        isMeeting ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {st ? (
-                        <span className="font-medium mr-1">{formatTimeAMPM(st)}</span>
-                      ) : (
-                        <span className="font-medium mr-1 italic text-[10px]">unsched.</span>
-                      )}
-                      {isMeeting ? (
-                        <><FileText className="h-2.5 w-2.5 inline mr-0.5" />{meeting!.title}</>
-                      ) : (
-                        <><StickyNote className="h-2.5 w-2.5 inline mr-0.5" />{note!.content}</>
-                      )}
-                    </div>
-                  );
+                    return (
+                      <div
+                        key={item.data.id}
+                        className={cn(
+                          "text-[11px] px-1.5 py-0.5 rounded truncate",
+                          isMeeting ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {st && (
+                          <span className="font-medium mr-1">{formatTimeAMPM(st)}</span>
+                        )}
+                        {isMeeting ? (
+                          <><FileText className="h-2.5 w-2.5 inline mr-0.5" />{meeting!.title}</>
+                        ) : (
+                          <><StickyNote className="h-2.5 w-2.5 inline mr-0.5" />{note!.content}</>
+                        )}
+                      </div>
+                    );
                 })}
                 {sortedItems.length > 3 && (
                   <span className="text-[10px] text-muted-foreground px-1.5">
