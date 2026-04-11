@@ -399,7 +399,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
               key={idx}
               onClick={() => handleDayClick(dayDate)}
               className={cn(
-                "min-h-[120px] p-1.5 border-r border-b border-border cursor-pointer transition-colors relative group",
+                "min-h-[120px] p-1.5 border-r border-b border-border cursor-pointer transition-colors relative group min-w-[140px]",
                 isCurrentMonth ? "bg-card" : "bg-muted/30",
                 isToday && "bg-primary/5",
                 "hover:bg-accent/50"
@@ -461,7 +461,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
 
       {/* Day Detail Popup */}
       <Dialog open={showDayDetail} onOpenChange={setShowDayDetail}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col pr-10">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden flex flex-col pr-12">
           <DialogHeader>
             <div className="flex items-center justify-between pr-4">
               <DialogTitle>
