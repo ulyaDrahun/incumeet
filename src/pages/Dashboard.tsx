@@ -44,12 +44,6 @@ export default function Dashboard() {
   const stats = {
     folderCount: folders.length,
     meetingCount: meetings.length,
-    starredCount:
-      folders.filter((f) => f.isStarred).length +
-      meetings.filter((m) => m.isStarred).length,
-    pinnedCount:
-      folders.filter((f) => f.isPinned).length +
-      meetings.filter((m) => m.isPinned).length,
   };
 
   const handleNewFolderClick = () => {
