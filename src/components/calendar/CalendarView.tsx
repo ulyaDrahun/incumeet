@@ -512,14 +512,15 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   ) : (
                     <motion.div key="meeting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
                       <Input placeholder="Meeting title" value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} autoFocus />
-                      <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                        <SelectTrigger><SelectValue placeholder="Select a folder (required)" /></SelectTrigger>
+                      <Select value={selectedFolderId} onValueChange={(v) => { setSelectedFolderId(v); setFolderError(false); }}>
+                        <SelectTrigger className={cn(folderError && "border-destructive")}><SelectValue placeholder="Select a folder (required)" /></SelectTrigger>
                         <SelectContent>
                           {folders.map((folder) => (
                             <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {folderError && <p className="text-xs text-destructive">Please select a folder before adding the meeting.</p>}
                       <div className="flex gap-2">
                         <div className="flex-1">
                           <label className="text-xs text-muted-foreground mb-1 block">Start time</label>
