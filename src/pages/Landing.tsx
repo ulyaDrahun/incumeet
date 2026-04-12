@@ -16,9 +16,9 @@ import { Input } from "@/components/ui/input";
 const features = [
   {
     icon: FileText,
-    title: "Upload Any Format",
+    title: "Upload Transcripts",
     description:
-      "Text transcripts, audio files, or video links — we handle it all.",
+      "Paste or upload your meeting transcripts and let AI do the rest.",
   },
   {
     icon: Sparkles,
@@ -28,15 +28,15 @@ const features = [
   },
   {
     icon: Folder,
-    title: "Organized Folders",
+    title: "Organized Workspace",
     description:
-      "Keep everything tidy with a folder system inspired by Notion.",
+      "Keep all your meeting notes organized in folders, easy to find and access.",
   },
   {
     icon: Mail,
-    title: "Easy Sharing",
+    title: "Instant Sharing",
     description:
-      "Email summaries to your team with one click.",
+      "Send meeting summaries to your team with one click — no copy-pasting needed.",
   },
 ];
 
@@ -92,13 +92,13 @@ export default function Landing() {
               AI-Powered Meeting Intelligence
             </div>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-              Turn meetings into
-              <span className="text-primary"> actionable insights</span>
+              Your meetings,
+              <span className="text-primary"> summarized in seconds</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Upload your meeting recordings or transcripts, and let AI
-              generate clear summaries, decisions, and action items. Stay
-              organized with folders, just like Notion.
+              Upload your meeting transcripts and let AI generate clear
+              summaries, decisions, and action items. Stay organized with all
+              your meeting notes in one place — and share summaries instantly.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" onClick={handleGetStarted} className="gap-2">
