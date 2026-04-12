@@ -1,19 +1,23 @@
 import { motion } from "framer-motion";
-import { Folder, FileText } from "lucide-react";
+import { Folder, FileText, Pin } from "lucide-react";
+import { PinnedSheet } from "./PinnedSheet";
+import { useFolders } from "@/contexts/FoldersContext";
 
 interface StatCardProps {
   icon: React.ReactNode;
   label: string;
   value: number;
   color: string;
+  onClick?: () => void;
 }
 
-function StatCard({ icon, label, value, color }: StatCardProps) {
+function StatCard({ icon, label, value, color, onClick }: StatCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="bg-card rounded-xl border border-border p-4 shadow-card"
+      className={`bg-card rounded-xl border border-border p-4 shadow-card ${onClick ? "cursor-pointer hover:shadow-elevated transition-shadow" : ""}`}
+      onClick={onClick}
     >
       <div className="flex items-center gap-3">
         <div
@@ -39,8 +43,11 @@ export function QuickStats({
   folderCount,
   meetingCount,
 }: QuickStatsProps) {
+  const { folders, meetings } = useFolders();
+  const pinnedCount = folders.filter(f => f.isPinned).length + meetings.filter(m => m.isPinned).length;
+
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-3 gap-4">
       <StatCard
         icon={<Folder className="h-5 w-5 text-primary" />}
         label="Folders"
@@ -53,6 +60,16 @@ export function QuickStats({
         value={meetingCount}
         color="bg-success/10"
       />
+      <PinnedSheet>
+        <div>
+          <StatCard
+            icon={<Pin className="h-5 w-5 text-pinned" />}
+            label="Pinned"
+            value={pinnedCount}
+            color="bg-pinned/10"
+          />
+        </div>
+      </PinnedSheet>
     </div>
   );
 }
