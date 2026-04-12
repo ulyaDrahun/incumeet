@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Loader2, Check, ChevronDown, Calendar } from "lucide-react";
+import { FileText, Loader2, Check, ChevronDown, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFolders } from "@/contexts/FoldersContext";
@@ -20,6 +21,29 @@ interface UploadModalProps {
   onOpenChange: (open: boolean) => void;
   folders: Folder[];
   defaultFolderId?: string;
+}
+
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
+
+const DURATION_OPTIONS = [
+  { value: "15", label: "15 min" },
+  { value: "30", label: "30 min" },
+  { value: "45", label: "45 min" },
+  { value: "60", label: "1 hour" },
+  { value: "90", label: "1.5 hours" },
+  { value: "120", label: "2 hours" },
+  { value: "180", label: "3 hours" },
+];
+
+function formatTimeAMPM(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 export function UploadModal({
@@ -42,6 +66,9 @@ export function UploadModal({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [meetingDate, setMeetingDate] = useState<Date>(new Date());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [includeTime, setIncludeTime] = useState(false);
+  const [startTime, setStartTime] = useState("09:00");
+  const [duration, setDuration] = useState("60");
 
   const newFolderInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,14 +104,12 @@ export function UploadModal({
     }
   };
 
-
   const handleSubmit = async () => {
     if (!title.trim()) {
       setError("Please enter a meeting title.");
       return;
     }
     
-    // Allow creating with new folder name typed
     let targetFolderId = folderId;
     if (isCreatingNewFolder && newFolderName.trim()) {
       targetFolderId = createFolder(newFolderName.trim());
@@ -112,6 +137,8 @@ export function UploadModal({
         transcript: content,
         summary: null,
         sourceType: selectedType,
+        startTime: includeTime ? startTime : undefined,
+        duration: includeTime ? parseInt(duration) : undefined,
       });
 
       toast({
@@ -153,6 +180,9 @@ export function UploadModal({
     setError(null);
     setDropdownOpen(false);
     setMeetingDate(new Date());
+    setIncludeTime(false);
+    setStartTime("09:00");
+    setDuration("60");
   };
 
   const selectedFolder = folders.find((f) => f.id === folderId);
@@ -203,6 +233,60 @@ export function UploadModal({
                 />
               </PopoverContent>
             </Popover>
+
+            {/* + Set Time toggle */}
+            {!includeTime ? (
+              <button
+                onClick={() => setIncludeTime(true)}
+                className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                + Set time
+              </button>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="flex gap-2 pt-1"
+              >
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground mb-1 block">Start time</label>
+                  <Select value={startTime} onValueChange={setStartTime}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue>{formatTimeAMPM(startTime)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      {TIME_OPTIONS.map(t => (
+                        <SelectItem key={t} value={t}>{formatTimeAMPM(t)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground mb-1 block">Duration</label>
+                  <Select value={duration} onValueChange={setDuration}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATION_OPTIONS.map(d => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 text-xs text-muted-foreground"
+                    onClick={() => setIncludeTime(false)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* 3. Transcript Input */}
@@ -216,11 +300,10 @@ export function UploadModal({
             />
           </div>
 
-          {/* 4. Folder Selection - Simplified */}
+          {/* 4. Folder Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Save To Folder</label>
             
-            {/* Dropdown trigger that shows selected folder or "New Folder" */}
             {!isCreatingNewFolder ? (
               <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
                 <PopoverTrigger asChild>
@@ -252,7 +335,6 @@ export function UploadModal({
                 </PopoverContent>
               </Popover>
             ) : (
-              /* When creating new folder, show condensed button + text input */
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-between" onClick={() => setDropdownOpen(true)}>
                   New Folder
@@ -265,7 +347,6 @@ export function UploadModal({
                   onChange={(e) => setNewFolderName(e.target.value)}
                   onKeyDown={handleNewFolderKeyDown}
                 />
-                {/* Re-open dropdown to select existing folder instead */}
                 {dropdownOpen && (
                   <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
                     <PopoverTrigger asChild>

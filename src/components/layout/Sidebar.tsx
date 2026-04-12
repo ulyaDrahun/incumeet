@@ -286,12 +286,6 @@ export function Sidebar() {
           href="/calendar"
           isActive={location.pathname === "/calendar"}
         />
-        <SidebarItem
-          icon={<Pin className="h-4 w-4" />}
-          label="Pinned"
-          href="/pinned"
-          isActive={location.pathname === "/pinned"}
-        />
 
         {/* Folders Section */}
         <div className="pt-4">
