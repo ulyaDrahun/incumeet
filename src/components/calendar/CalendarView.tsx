@@ -399,7 +399,7 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
               key={idx}
               onClick={() => handleDayClick(dayDate)}
               className={cn(
-                "min-h-[120px] p-1.5 border-r border-b border-border cursor-pointer transition-colors relative group min-w-[140px]",
+                "min-h-[120px] p-1.5 border-r border-b border-border cursor-pointer transition-colors relative group",
                 isCurrentMonth ? "bg-card" : "bg-muted/30",
                 isToday && "bg-primary/5",
                 "hover:bg-accent/50"
