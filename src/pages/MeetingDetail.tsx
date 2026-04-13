@@ -415,7 +415,7 @@ export default function MeetingDetail() {
       {/* Email Modal */}
       <Dialog open={showEmailModal} onOpenChange={(open) => {
         setShowEmailModal(open);
-        if (open && !emailBody) setEmailBody(generateEmailBody());
+        if (open) setEmailBody(generateEmailHtml());
       }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader><DialogTitle>Email Meeting Summary</DialogTitle></DialogHeader>
@@ -439,17 +439,22 @@ export default function MeetingDetail() {
               <Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email Body (editable)</label>
-              <Textarea
-                value={emailBody}
-                onChange={(e) => setEmailBody(e.target.value)}
-                className="min-h-[250px] font-sans text-sm"
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Preview (click to edit)</label>
+                <Button variant="outline" size="sm" onClick={() => setEmailBody(generateEmailHtml())}>
+                  <RefreshCw className="h-3.5 w-3.5" />Reset to default
+                </Button>
+              </div>
+              <div
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: emailBody }}
+                onBlur={(e) => setEmailBody(e.currentTarget.innerHTML)}
+                className="min-h-[250px] border border-border rounded-md p-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background overflow-y-auto cursor-text"
+                style={{ maxHeight: '350px' }}
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setEmailBody(generateEmailBody())}>
-                <RefreshCw className="h-3.5 w-3.5" />Reset to default
-              </Button>
               <Button variant="outline" onClick={() => setShowEmailModal(false)}>Cancel</Button>
               <Button onClick={handleSendEmail} disabled={isSendingEmail}>
                 {isSendingEmail ? <><Loader2 className="h-4 w-4 animate-spin" />Sending...</> : <><Mail className="h-4 w-4" />Send Email</>}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DndContext,
@@ -28,12 +28,24 @@ import {
   Pin,
   Settings,
   LogOut,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronRight,
   ChevronDown,
   GripVertical,
   Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useFolders } from "@/contexts/FoldersContext";
 import type { Folder as FolderType } from "@/types";
@@ -164,11 +176,18 @@ function FolderItemOverlay({ folder }: { folder: FolderType }) {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { folders, createFolder, reorderFolders, moveFolderIntoFolder, getSubfolders, getActualMeetingCount } = useFolders();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [activeFolder, setActiveFolder] = useState<FolderType | null>(null);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -211,6 +230,11 @@ export function Sidebar() {
 
   const handleDragOver = (event: DragOverEvent) => {
     // Could implement drop into folder logic here
+  };
+
+  const handleSignOut = () => {
+    setShowSignOutDialog(false);
+    navigate("/");
   };
 
   // Sort folders: pinned first, then by order
@@ -260,78 +284,109 @@ export function Sidebar() {
     });
   };
 
+  if (collapsed) return null;
+
   return (
-    <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
-      {/* Logo */}
-      <div className="p-4 border-b border-sidebar-border">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">I</span>
-          </div>
-          <span className="font-semibold text-lg">Incumeet</span>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        <SidebarItem
-          icon={<Home className="h-4 w-4" />}
-          label="Dashboard"
-          href="/dashboard"
-          isActive={location.pathname === "/dashboard"}
-        />
-        <SidebarItem
-          icon={<Calendar className="h-4 w-4" />}
-          label="Calendar"
-          href="/calendar"
-          isActive={location.pathname === "/calendar"}
-        />
-
-        {/* Folders Section */}
-        <div className="pt-4">
-          <div className="flex items-center justify-between px-3 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Folders
-            </span>
-            <Button variant="ghost" size="icon-sm" className="h-6 w-6" onClick={handleNewFolder}>
-              <FolderPlus className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-          >
-            <SortableContext
-              items={sortedRootFolders.map((f) => f.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-0.5">
-                {renderFolderTree(null)}
+    <>
+      <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
+        {/* Logo */}
+        <div className="p-4 border-b border-sidebar-border">
+          <div className="flex items-center justify-between">
+            <Link to="/dashboard" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">I</span>
               </div>
-            </SortableContext>
-            <DragOverlay>
-              {activeFolder && <FolderItemOverlay folder={activeFolder} />}
-            </DragOverlay>
-          </DndContext>
+              <span className="font-semibold text-lg">Incumeet</span>
+            </Link>
+            <button
+              onClick={onToggle}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-accent"
+              aria-label="Collapse sidebar"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-      </nav>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-sidebar-border space-y-1">
-        <SidebarItem
-          icon={<Settings className="h-4 w-4" />}
-          label="Settings"
-          href="/settings"
-          isActive={location.pathname === "/settings"}
-        />
-        <button className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent w-full transition-colors">
-          <LogOut className="h-4 w-4" />
-          <span>Sign Out</span>
-        </button>
-      </div>
-    </aside>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          <SidebarItem
+            icon={<Home className="h-4 w-4" />}
+            label="Dashboard"
+            href="/dashboard"
+            isActive={location.pathname === "/dashboard"}
+          />
+          <SidebarItem
+            icon={<Calendar className="h-4 w-4" />}
+            label="Calendar"
+            href="/calendar"
+            isActive={location.pathname === "/calendar"}
+          />
+
+          {/* Folders Section */}
+          <div className="pt-4">
+            <div className="flex items-center justify-between px-3 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Folders
+              </span>
+              <Button variant="ghost" size="icon-sm" className="h-6 w-6" onClick={handleNewFolder}>
+                <FolderPlus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+            >
+              <SortableContext
+                items={sortedRootFolders.map((f) => f.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-0.5">
+                  {renderFolderTree(null)}
+                </div>
+              </SortableContext>
+              <DragOverlay>
+                {activeFolder && <FolderItemOverlay folder={activeFolder} />}
+              </DragOverlay>
+            </DndContext>
+          </div>
+        </nav>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-sidebar-border space-y-1">
+          <SidebarItem
+            icon={<Settings className="h-4 w-4" />}
+            label="Settings"
+            href="/settings"
+            isActive={location.pathname === "/settings"}
+          />
+          <button
+            onClick={() => setShowSignOutDialog(true)}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent w-full transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      <AlertDialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out of Incumeet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out? You will need to sign in again to access your meetings and folders.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOut}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
