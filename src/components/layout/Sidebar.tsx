@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DndContext,
@@ -28,6 +28,8 @@ import {
   Pin,
   Settings,
   LogOut,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronRight,
   ChevronDown,
   GripVertical,
