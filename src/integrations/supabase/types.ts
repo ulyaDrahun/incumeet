@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      calendar_notes: {
+        Row: {
+          content: string
+          created_at: string
+          date: string
+          duration: number | null
+          id: string
+          meeting_id: string | null
+          start_time: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          date: string
+          duration?: number | null
+          id?: string
+          meeting_id?: string | null
+          start_time?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          date?: string
+          duration?: number | null
+          id?: string
+          meeting_id?: string | null
+          start_time?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_notes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          is_pinned: boolean
+          is_starred: boolean
+          name: string
+          order: number
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_starred?: boolean
+          name: string
+          order?: number
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_starred?: boolean
+          name?: string
+          order?: number
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          created_at: string
+          duration: number | null
+          folder_id: string
+          id: string
+          is_pinned: boolean
+          is_starred: boolean
+          manual_notes: string | null
+          meeting_date: string
+          order: number
+          source_type: string
+          start_time: string | null
+          summary: Json | null
+          title: string
+          transcript: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: number | null
+          folder_id: string
+          id?: string
+          is_pinned?: boolean
+          is_starred?: boolean
+          manual_notes?: string | null
+          meeting_date?: string
+          order?: number
+          source_type?: string
+          start_time?: string | null
+          summary?: Json | null
+          title: string
+          transcript?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration?: number | null
+          folder_id?: string
+          id?: string
+          is_pinned?: boolean
+          is_starred?: boolean
+          manual_notes?: string | null
+          meeting_date?: string
+          order?: number
+          source_type?: string
+          start_time?: string | null
+          summary?: Json | null
+          title?: string
+          transcript?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
