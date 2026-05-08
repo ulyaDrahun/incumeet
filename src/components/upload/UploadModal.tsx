@@ -112,7 +112,7 @@ export function UploadModal({
     
     let targetFolderId = folderId;
     if (isCreatingNewFolder && newFolderName.trim()) {
-      targetFolderId = createFolder(newFolderName.trim());
+      targetFolderId = await createFolder(newFolderName.trim());
     }
     
     if (!targetFolderId) {
@@ -128,7 +128,7 @@ export function UploadModal({
     setIsUploading(true);
 
     try {
-      const meetingId = createMeeting({
+      const meetingId = await createMeeting({
         title: title.trim(),
         folderId: targetFolderId,
         isStarred: false,
