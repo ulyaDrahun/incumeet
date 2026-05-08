@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useFolders } from "@/contexts/FoldersContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Folder as FolderType } from "@/types";
 
 interface SidebarItemProps {
@@ -184,6 +185,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { folders, createFolder, reorderFolders, moveFolderIntoFolder, getSubfolders, getActualMeetingCount } = useFolders();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [activeFolder, setActiveFolder] = useState<FolderType | null>(null);
@@ -232,8 +234,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     // Could implement drop into folder logic here
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setShowSignOutDialog(false);
+    await signOut();
     navigate("/");
   };
 
