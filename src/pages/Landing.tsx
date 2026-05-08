@@ -102,12 +102,14 @@ export default function Landing() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" onClick={handleGetStarted} className="gap-2">
-                Start for Free
+                Get Started
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline">
-                See How It Works
-              </Button>
+              <Link to="/auth">
+                <Button size="lg" variant="outline">
+                  Sign In
+                </Button>
+              </Link>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
               No credit card required • Free forever
