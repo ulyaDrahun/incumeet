@@ -377,7 +377,7 @@ export default function MeetingDetail() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>Full Transcript</DialogTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-8">
                 {isEditingTranscript ? (
                   <>
                     <Button variant="ghost" size="sm" onClick={() => { setEditedTranscript(meeting.transcript); setIsEditingTranscript(false); }}>
