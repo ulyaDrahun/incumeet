@@ -307,7 +307,7 @@ export default function MeetingDetail() {
                     <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Action Items</h2>
                     {isEditing ? (
                       <Textarea
-                        value={editedSummary?.actionItems.map(g => `${g.person}:\n${g.items.map(i => `• ${i}`).join("\n")}`).join("\n\n") || ""}
+                        value={(editedSummary?.actionItems || []).map(g => `${g.person}:\n${(g.items || []).map(i => `• ${i}`).join("\n")}`).join("\n\n")}
                         onChange={(e) => handleActionItemsEdit(e.target.value)}
                         placeholder="Person Name:\n• Action item 1"
                         className="min-h-[150px] font-mono text-sm"
