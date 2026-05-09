@@ -291,7 +291,7 @@ export default function MeetingDetail() {
                   <div className="p-6">
                     <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Key Decisions</h2>
                     {isEditing ? (
-                      <Textarea value={editedSummary?.keyDecisions.join("\n") || ""} onChange={(e) => setEditedSummary({ ...editedSummary!, keyDecisions: e.target.value.split("\n").filter(Boolean) })} placeholder="One decision per line" className="min-h-[120px]" />
+                      <Textarea value={(editedSummary?.keyDecisions || []).join("\n")} onChange={(e) => setEditedSummary({ ...editedSummary!, keyDecisions: e.target.value.split("\n").filter(Boolean) })} placeholder="One decision per line" className="min-h-[120px]" />
                     ) : (
                       <ul className="space-y-2">
                         {(meeting.summary.keyDecisions || []).map((decision, i) => (
