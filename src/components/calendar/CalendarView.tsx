@@ -292,17 +292,25 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setIncludeNoteTime(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedDate) return;
     if (addType === "note" && noteContent.trim()) {
       onAddNote(selectedDate, noteContent.trim(), includeNoteTime ? noteStartTime : undefined, includeNoteTime ? parseInt(noteDuration) : undefined);
     } else if (addType === "meeting") {
-      if (!selectedFolderId) {
+      let folderId = selectedFolderId;
+      if (isCreatingNewFolder) {
+        if (!newFolderName.trim()) {
+          setFolderError(true);
+          return;
+        }
+        folderId = await createFolder(newFolderName.trim());
+      }
+      if (!folderId) {
         setFolderError(true);
         return;
       }
       if (meetingTitle.trim()) {
-        onAddMeeting(selectedDate, meetingTitle.trim(), selectedFolderId, startTime, parseInt(duration));
+        onAddMeeting(selectedDate, meetingTitle.trim(), folderId, startTime, parseInt(duration));
       }
     }
     setShowAddForm(false);
@@ -315,6 +323,8 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setNoteStartTime("09:00");
     setNoteDuration("30");
     setFolderError(false);
+    setIsCreatingNewFolder(false);
+    setNewFolderName("");
   };
 
   const startEditItem = (id: string, type: "meeting" | "note", st: string, dur: number, name: string) => {
