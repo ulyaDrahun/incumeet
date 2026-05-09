@@ -227,6 +227,10 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const [noteStartTime, setNoteStartTime] = useState("09:00");
   const [noteDuration, setNoteDuration] = useState("30");
   const [folderError, setFolderError] = useState(false);
+  const [isCreatingNewFolder, setIsCreatingNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const NEW_FOLDER_VALUE = "__new_folder__";
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
