@@ -456,9 +456,14 @@ export default function MeetingDetail() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Preview (click to edit)</label>
-                <Button variant="outline" size="sm" onClick={() => setEmailBody(generateEmailHtml())}>
-                  <RefreshCw className="h-3.5 w-3.5" />Reset to default
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setEmailBody("")}>
+                    <X className="h-3.5 w-3.5" />Clear
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setEmailBody(generateEmailHtml())}>
+                    <RefreshCw className="h-3.5 w-3.5" />Reset
+                  </Button>
+                </div>
               </div>
               <div
                 contentEditable
