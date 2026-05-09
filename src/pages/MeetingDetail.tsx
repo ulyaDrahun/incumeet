@@ -291,7 +291,7 @@ export default function MeetingDetail() {
                   <div className="p-6">
                     <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Key Decisions</h2>
                     {isEditing ? (
-                      <Textarea value={editedSummary?.keyDecisions.join("\n") || ""} onChange={(e) => setEditedSummary({ ...editedSummary!, keyDecisions: e.target.value.split("\n").filter(Boolean) })} placeholder="One decision per line" className="min-h-[120px]" />
+                      <Textarea value={(editedSummary?.keyDecisions || []).join("\n")} onChange={(e) => setEditedSummary({ ...editedSummary!, keyDecisions: e.target.value.split("\n").filter(Boolean) })} placeholder="One decision per line" className="min-h-[120px]" />
                     ) : (
                       <ul className="space-y-2">
                         {(meeting.summary.keyDecisions || []).map((decision, i) => (
@@ -307,7 +307,7 @@ export default function MeetingDetail() {
                     <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Action Items</h2>
                     {isEditing ? (
                       <Textarea
-                        value={editedSummary?.actionItems.map(g => `${g.person}:\n${g.items.map(i => `• ${i}`).join("\n")}`).join("\n\n") || ""}
+                        value={(editedSummary?.actionItems || []).map(g => `${g.person}:\n${(g.items || []).map(i => `• ${i}`).join("\n")}`).join("\n\n")}
                         onChange={(e) => handleActionItemsEdit(e.target.value)}
                         placeholder="Person Name:\n• Action item 1"
                         className="min-h-[150px] font-mono text-sm"
@@ -318,7 +318,7 @@ export default function MeetingDetail() {
                           <div key={groupIdx}>
                             <h3 className="font-semibold text-foreground mb-2">{group.person}</h3>
                             <ul className="space-y-2 ml-4">
-                              {group.items.map((item, itemIdx) => {
+                              {(group.items || []).map((item, itemIdx) => {
                                 const key = `${groupIdx}-${itemIdx}`;
                                 const isChecked = checkedItems[key] || false;
                                 return (
