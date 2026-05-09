@@ -207,7 +207,7 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
 
 export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewProps) {
   const navigate = useNavigate();
-  const { folders, meetings, updateMeeting, updateCalendarNote } = useFolders();
+  const { folders, meetings, updateMeeting, updateCalendarNote, createFolder } = useFolders();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
