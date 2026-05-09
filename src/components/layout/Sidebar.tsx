@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { useFolders } from "@/contexts/FoldersContext";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Folder as FolderType } from "@/types";
+import { Logo } from "@/components/Logo";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
