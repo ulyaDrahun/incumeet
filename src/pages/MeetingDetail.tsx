@@ -318,7 +318,7 @@ export default function MeetingDetail() {
                           <div key={groupIdx}>
                             <h3 className="font-semibold text-foreground mb-2">{group.person}</h3>
                             <ul className="space-y-2 ml-4">
-                              {group.items.map((item, itemIdx) => {
+                              {(group.items || []).map((item, itemIdx) => {
                                 const key = `${groupIdx}-${itemIdx}`;
                                 const isChecked = checkedItems[key] || false;
                                 return (
