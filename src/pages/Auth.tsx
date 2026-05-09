@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/contexts/AuthContext";
+import { Logo } from "@/components/Logo";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -82,11 +83,8 @@ export default function Auth() {
           </Link>
 
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">I</span>
-              </div>
-              <span className="font-semibold text-lg">Incumeet</span>
+            <div className="mb-6">
+              <Logo size="md" />
             </div>
             <h1 className="text-2xl font-bold">
               {mode === "signin" ? "Welcome back" : mode === "signup" ? "Create your account" : "Reset your password"}

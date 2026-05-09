@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { useFolders } from "@/contexts/FoldersContext";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Folder as FolderType } from "@/types";
+import { Logo } from "@/components/Logo";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -295,11 +296,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Logo */}
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">I</span>
-              </div>
-              <span className="font-semibold text-lg">Incumeet</span>
+            <Link to="/dashboard">
+              <Logo size="sm" />
             </Link>
             <button
               onClick={onToggle}

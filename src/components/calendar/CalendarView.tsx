@@ -207,7 +207,7 @@ function computeOverlapColumns(items: TimelineItem[]): Map<string, { col: number
 
 export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewProps) {
   const navigate = useNavigate();
-  const { folders, meetings, updateMeeting, updateCalendarNote } = useFolders();
+  const { folders, meetings, updateMeeting, updateCalendarNote, createFolder } = useFolders();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
@@ -227,6 +227,10 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
   const [noteStartTime, setNoteStartTime] = useState("09:00");
   const [noteDuration, setNoteDuration] = useState("30");
   const [folderError, setFolderError] = useState(false);
+  const [isCreatingNewFolder, setIsCreatingNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const NEW_FOLDER_VALUE = "__new_folder__";
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -288,17 +292,25 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setIncludeNoteTime(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedDate) return;
     if (addType === "note" && noteContent.trim()) {
       onAddNote(selectedDate, noteContent.trim(), includeNoteTime ? noteStartTime : undefined, includeNoteTime ? parseInt(noteDuration) : undefined);
     } else if (addType === "meeting") {
-      if (!selectedFolderId) {
+      let folderId = selectedFolderId;
+      if (isCreatingNewFolder) {
+        if (!newFolderName.trim()) {
+          setFolderError(true);
+          return;
+        }
+        folderId = await createFolder(newFolderName.trim());
+      }
+      if (!folderId) {
         setFolderError(true);
         return;
       }
       if (meetingTitle.trim()) {
-        onAddMeeting(selectedDate, meetingTitle.trim(), selectedFolderId, startTime, parseInt(duration));
+        onAddMeeting(selectedDate, meetingTitle.trim(), folderId, startTime, parseInt(duration));
       }
     }
     setShowAddForm(false);
@@ -311,6 +323,8 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
     setNoteStartTime("09:00");
     setNoteDuration("30");
     setFolderError(false);
+    setIsCreatingNewFolder(false);
+    setNewFolderName("");
   };
 
   const startEditItem = (id: string, type: "meeting" | "note", st: string, dur: number, name: string) => {
@@ -512,15 +526,55 @@ export function CalendarView({ notes, onAddNote, onAddMeeting }: CalendarViewPro
                   ) : (
                     <motion.div key="meeting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
                       <Input placeholder="Meeting title" value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} autoFocus />
-                      <Select value={selectedFolderId} onValueChange={(v) => { setSelectedFolderId(v); setFolderError(false); }}>
-                        <SelectTrigger className={cn(folderError && "border-destructive")}><SelectValue placeholder="Select a folder (required)" /></SelectTrigger>
-                        <SelectContent>
-                          {folders.map((folder) => (
-                            <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {folderError && <p className="text-xs text-destructive">Please select a folder before adding the meeting.</p>}
+                      {!isCreatingNewFolder ? (
+                        <Select
+                          value={selectedFolderId}
+                          onValueChange={(v) => {
+                            if (v === NEW_FOLDER_VALUE) {
+                              setIsCreatingNewFolder(true);
+                              setSelectedFolderId("");
+                              setFolderError(false);
+                            } else {
+                              setSelectedFolderId(v);
+                              setFolderError(false);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className={cn(folderError && !isCreatingNewFolder && "border-destructive")}>
+                            <SelectValue placeholder="Select a folder (required)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {folders.map((folder) => (
+                              <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
+                            ))}
+                            <SelectItem value={NEW_FOLDER_VALUE} className="text-primary font-medium">
+                              + New Folder
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Enter new folder name..."
+                            value={newFolderName}
+                            onChange={(e) => { setNewFolderName(e.target.value); setFolderError(false); }}
+                            className={cn(folderError && "border-destructive")}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { setIsCreatingNewFolder(false); setNewFolderName(""); setFolderError(false); }}
+                            className="text-xs text-muted-foreground hover:text-foreground underline"
+                          >
+                            ← Choose existing folder instead
+                          </button>
+                        </div>
+                      )}
+                      {folderError && (
+                        <p className="text-xs text-destructive">
+                          {isCreatingNewFolder ? "Please name the new folder." : "Please select a folder before adding the meeting."}
+                        </p>
+                      )}
                       <div className="flex gap-2">
                         <div className="flex-1">
                           <label className="text-xs text-muted-foreground mb-1 block">Start time</label>
