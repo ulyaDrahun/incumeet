@@ -61,38 +61,36 @@ export default function Landing() {
       {/* Header */}
       <header className="border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center h-16">
             <Logo size="sm" />
-            <div className="flex items-center gap-4">
-              <Link to="/auth">
-                <Button variant="ghost">Sign In</Button>
-              </Link>
-              <Button onClick={handleGetStarted}>Get Started</Button>
-            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32">
+      <section className="py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
+            <div className="flex justify-center mb-8">
+              <Logo size="xl" />
+            </div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
               <Sparkles className="h-4 w-4" />
               AI-Powered Meeting Intelligence
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
               Your meetings,
               <span className="text-primary"> summarized in seconds</span>
             </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Upload your meeting transcripts and let AI generate clear
-              summaries, decisions, and action items. Stay organized with all
-              your meeting notes in one place — and share summaries instantly.
+            <p className="text-lg md:text-xl text-foreground/80 mb-4 max-w-2xl mx-auto font-medium">
+              Upload your meeting transcripts and let AI generate clear summaries, decisions, and action items.
+            </p>
+            <p className="text-base text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Stay organized with all your meeting notes in one place — and share summaries instantly.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" onClick={handleGetStarted} className="gap-2">
