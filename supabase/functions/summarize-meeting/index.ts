@@ -36,15 +36,18 @@ serve(async (req) => {
     const systemPrompt = `You are an assistant that summarizes meeting transcripts.
 
 Given the following meeting transcript, generate:
-1. A short meeting summary (1 paragraph)
-2. Key decisions (bullet points)
-3. Action items (bullet points)
+1. A short meeting summary (1 paragraph).
+2. Key decisions (bullet points). If no explicit decisions were made, list the most important takeaways instead.
+3. Action items grouped by person. Identify the names of every participant you can detect in the transcript. For each named participant, list reasonable next steps for them based on what was discussed — even if no one explicitly said "I will do X". Infer rational, helpful follow-ups from context (topics they raised, questions they asked, areas they own). If you truly cannot identify any names, use roles like "Team" or "Facilitator". Never return an empty actionItems array unless the transcript is essentially empty.
 
 Respond in valid JSON format exactly like this:
 {
   "shortSummary": "...",
   "keyDecisions": ["decision 1", "decision 2"],
-  "actionItems": ["action 1", "action 2"]
+  "actionItems": [
+    { "person": "Alice", "items": ["next step 1", "next step 2"] },
+    { "person": "Bob", "items": ["next step 1"] }
+  ]
 }
 
 Only output the JSON, no other text.`;
@@ -117,11 +120,23 @@ Only output the JSON, no other text.`;
       );
     }
 
-    // Validate structure
+    // Normalize action items: prefer grouped-by-person, but accept legacy flat string arrays
+    let actionItems: Array<{ person: string; items: string[] }> = [];
+    if (Array.isArray(parsed.actionItems)) {
+      if (parsed.actionItems.length > 0 && typeof parsed.actionItems[0] === "string") {
+        actionItems = [{ person: "Team", items: parsed.actionItems.filter((x: any) => typeof x === "string" && x.trim()) }];
+      } else {
+        actionItems = parsed.actionItems
+          .filter((g: any) => g && typeof g.person === "string" && Array.isArray(g.items))
+          .map((g: any) => ({ person: g.person, items: g.items.filter((x: any) => typeof x === "string" && x.trim()) }))
+          .filter((g: any) => g.items.length > 0);
+      }
+    }
+
     const summary = {
       shortSummary: parsed.shortSummary || "Summary not available.",
-      keyDecisions: Array.isArray(parsed.keyDecisions) ? parsed.keyDecisions : [],
-      actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
+      keyDecisions: Array.isArray(parsed.keyDecisions) ? parsed.keyDecisions.filter((x: any) => typeof x === "string" && x.trim()) : [],
+      actionItems,
     };
 
     console.log("Summary generated successfully");
