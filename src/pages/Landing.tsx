@@ -75,23 +75,19 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-6">
               <Logo size="xl" />
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-              <Sparkles className="h-4 w-4" />
-              AI-Powered Meeting Intelligence
+            <div className="flex justify-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                <Sparkles className="h-4 w-4" />
+                AI-Powered Meeting Intelligence
+              </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
-              Your meetings,
-              <span className="text-primary"> summarized in seconds</span>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-10">
+              <span className="text-foreground">Your meetings,</span>{" "}
+              <span className="text-primary">summarized, stored and shared in seconds</span>
             </h1>
-            <p className="text-lg md:text-xl text-foreground/80 mb-4 max-w-2xl mx-auto font-medium">
-              Upload your meeting transcripts and let AI generate clear summaries, decisions, and action items.
-            </p>
-            <p className="text-base text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Stay organized with all your meeting notes in one place — and share summaries instantly.
-            </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" onClick={handleGetStarted} className="gap-2">
                 Get Started
@@ -105,6 +101,9 @@ export default function Landing() {
             </div>
             <p className="text-sm text-muted-foreground mt-4">
               No credit card required • Free forever
+            </p>
+            <p className="text-base text-muted-foreground mt-10 max-w-2xl mx-auto">
+              Upload your meeting transcripts and let AI generate clear summaries, decisions, and action items.
             </p>
           </motion.div>
         </div>
