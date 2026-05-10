@@ -120,11 +120,23 @@ Only output the JSON, no other text.`;
       );
     }
 
-    // Validate structure
+    // Normalize action items: prefer grouped-by-person, but accept legacy flat string arrays
+    let actionItems: Array<{ person: string; items: string[] }> = [];
+    if (Array.isArray(parsed.actionItems)) {
+      if (parsed.actionItems.length > 0 && typeof parsed.actionItems[0] === "string") {
+        actionItems = [{ person: "Team", items: parsed.actionItems.filter((x: any) => typeof x === "string" && x.trim()) }];
+      } else {
+        actionItems = parsed.actionItems
+          .filter((g: any) => g && typeof g.person === "string" && Array.isArray(g.items))
+          .map((g: any) => ({ person: g.person, items: g.items.filter((x: any) => typeof x === "string" && x.trim()) }))
+          .filter((g: any) => g.items.length > 0);
+      }
+    }
+
     const summary = {
       shortSummary: parsed.shortSummary || "Summary not available.",
-      keyDecisions: Array.isArray(parsed.keyDecisions) ? parsed.keyDecisions : [],
-      actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
+      keyDecisions: Array.isArray(parsed.keyDecisions) ? parsed.keyDecisions.filter((x: any) => typeof x === "string" && x.trim()) : [],
+      actionItems,
     };
 
     console.log("Summary generated successfully");
