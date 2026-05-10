@@ -49,6 +49,12 @@ export default function MeetingDetail() {
     if (meeting?.manualNotes !== undefined) setManualNotes(meeting.manualNotes || "");
   }, [meeting?.summary, meeting?.title, meeting?.manualNotes]);
 
+  // Prefill email preview body whenever the summary becomes available
+  useEffect(() => {
+    if (meeting?.summary) setEmailBody(generateEmailHtml());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meeting?.summary, meeting?.title]);
+
   if (!meeting) {
     return (
       <AppLayout>
