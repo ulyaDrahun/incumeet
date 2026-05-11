@@ -2,6 +2,8 @@
 
 **AI-powered meeting intelligence — turn raw transcripts into clear summaries, decisions, and action items in seconds.**
 
+🔗 **Live app:** [https://incumeet.lovable.app](https://incumeet.lovable.app)
+
 Incumeet is a web app that helps professionals get more out of every meeting. Instead of re-reading long transcripts or re-watching recordings, upload your meeting transcript and Incumeet's AI will generate a structured summary, surface key decisions, and pull out action items per person — even inferring sensible next steps when participants don't explicitly assign them.
 
 ## ✨ Features
