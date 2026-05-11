@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
+import eggLogo from "@/assets/incumeet-egg.png";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -161,8 +162,8 @@ export default function Auth() {
 
       <div className="hidden lg:flex flex-1 bg-primary items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="text-center text-primary-foreground max-w-md">
-          <div className="w-16 h-16 rounded-2xl bg-primary-foreground/10 flex items-center justify-center mx-auto mb-6">
-            <span className="text-3xl font-bold">I</span>
+          <div className="flex items-center justify-center mx-auto mb-6">
+            <img src={eggLogo} alt="Incumeet" className="h-24 w-24 object-contain" />
           </div>
           <h2 className="text-2xl font-bold mb-4">Your meetings, organized and actionable</h2>
           <p className="text-primary-foreground/80">

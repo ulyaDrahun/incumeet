@@ -244,7 +244,7 @@ export default function Landing() {
               Ready to transform your meetings?
             </h2>
             <p className="text-lg opacity-90 mb-8">
-              Join thousands of professionals who never miss an action item.
+              Join professionals who never miss an action item.
             </p>
             <Button
               size="lg"
