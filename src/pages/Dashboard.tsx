@@ -115,7 +115,7 @@ export default function Dashboard() {
             {sortedFolders.map((folder) => (
               <FolderCard
                 key={folder.id}
-                folder={folder}
+                folder={{ ...folder, meetingCount: meetings.filter((m) => m.folderId === folder.id).length }}
                 onStar={toggleFolderStar}
                 onPin={toggleFolderPinned}
                 onRename={(id, name) => updateFolder(id, { name })}
