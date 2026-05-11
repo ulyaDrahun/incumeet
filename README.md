@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# Incumeet
 
-## Project info
+**AI-powered meeting intelligence — turn raw transcripts into clear summaries, decisions, and action items in seconds.**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Incumeet is a web app that helps professionals get more out of every meeting. Instead of re-reading long transcripts or re-watching recordings, upload your meeting transcript and Incumeet's AI will generate a structured summary, surface key decisions, and pull out action items per person — even inferring sensible next steps when participants don't explicitly assign them.
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+- **Transcript-based AI summaries** — Upload a meeting transcript and get a concise summary, decisions, and per-person action items powered by modern LLMs.
+- **Folder-first organization** — Group meetings into folders (e.g. by client, project, or team). Folders can be searched, sorted, and shared.
+- **Calendar view** — See all your meetings on a 24h timeline with overlap handling. Add meetings directly from the calendar, including creating new folders inline.
+- **Pinned & priority items** — Mark important meetings with a red pin (top of list) or yellow star (priority).
+- **Action item tracking** — Tick off action items as they're completed. Progress is saved per meeting and persists across sessions.
+- **Editable summaries & notes** — Refine the AI output, add your own meeting notes, and edit the transcript when needed.
+- **Email-ready summaries** — Generate a clean, formatted HTML summary you can copy and share with attendees.
+- **Authentication & private workspaces** — Each user has their own secure workspace; meetings and folders are private by default.
+- **Light & dark mode** — Minimalist Notion/SharePoint-inspired UI that looks great in both themes.
 
-**Use Lovable**
+## 🧭 How to use it
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+1. **Sign up / sign in** on the landing page.
+2. **Create a folder** for the project, client, or team you're meeting about.
+3. **Upload a transcript** ("New Meeting" → paste or upload your transcript and pick a folder).
+4. **Generate the AI summary** — Incumeet produces a summary, list of decisions, and action items grouped by person.
+5. **Refine** — edit the summary, add manual notes, tick off completed action items, and pin or star important meetings.
+6. **Share** — copy the formatted summary to email it to attendees, or share folders with collaborators.
+7. **Browse** — use the dashboard, folder views, or calendar to find past meetings quickly.
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tech stack
 
-**Use your preferred IDE**
+- **Frontend:** React + TypeScript + Vite, Tailwind CSS, shadcn/ui, Framer Motion
+- **Backend:** Lovable Cloud (managed Supabase) — Postgres with Row Level Security, Auth, and Edge Functions
+- **AI:** Lovable AI Gateway (Google Gemini / OpenAI GPT models) for summarization and action-item extraction
+- **Build / deploy:** Lovable
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## 🚀 Local development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# 1. Clone
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# 2. Install
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 3. Run the dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:5173`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📦 Deployment
 
-**Use GitHub Codespaces**
+This project is built and hosted on [Lovable](https://lovable.dev). To publish a new version, open the project in Lovable and click **Publish**. Frontend changes go live after publishing; backend changes (database migrations, edge functions) deploy automatically.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Built with care to make meetings less of a chore.
