@@ -38,7 +38,18 @@ export default function MeetingDetail() {
   const [emailBody, setEmailBody] = useState("");
   const [isEditingTranscript, setIsEditingTranscript] = useState(false);
   const [editedTranscript, setEditedTranscript] = useState(meeting?.transcript || "");
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const checkedStorageKey = `incumeet:checkedItems:${id || ""}`;
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined" || !id) return {};
+    try {
+      const raw = localStorage.getItem(`incumeet:checkedItems:${id}`);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !id) return;
+    try { localStorage.setItem(checkedStorageKey, JSON.stringify(checkedItems)); } catch {}
+  }, [checkedItems, checkedStorageKey, id]);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [editMeetingStartTime, setEditMeetingStartTime] = useState(meeting?.startTime || "09:00");
   const [editMeetingDuration, setEditMeetingDuration] = useState(String(meeting?.duration || 60));
