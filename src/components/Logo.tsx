@@ -43,12 +43,13 @@ export function Logo({ size = "sm", showWordmark = true, className }: LogoProps)
               aria-hidden
               className="absolute left-1/2"
               style={{
-                top: "-0.08em",
+                top: "-0.22em",
                 width: "0.42em",
                 height: "0.55em",
                 transform: "translateX(-50%) rotate(-12deg)",
                 background: YELLOW,
                 borderRadius: "50% 50% 48% 48% / 62% 62% 38% 38%",
+                boxShadow: "0 -0.04em 0 0.04em hsl(var(--background))",
               }}
             />
           </span>
