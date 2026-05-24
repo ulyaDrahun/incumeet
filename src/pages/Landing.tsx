@@ -59,49 +59,37 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Animated gradient orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div
-          animate={{
-            opacity: [0.3, 0.6, 0.3],
-            scale: [1, 1.15, 1],
-          }}
+          animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.15, 1] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full"
+          className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full blur-3xl"
           style={{
-            background: "radial-gradient(circle, hsl(277 60% 55% / 0.25) 0%, transparent 70%)",
+            background: "radial-gradient(circle, hsl(277 80% 60% / 0.55) 0%, transparent 70%)",
           }}
         />
         <motion.div
-          animate={{
-            opacity: [0.2, 0.5, 0.2],
-            scale: [1, 1.2, 1],
-          }}
+          animate={{ opacity: [0.6, 0.95, 0.6], scale: [1, 1.2, 1] }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-1/3 -right-40 w-[600px] h-[600px] rounded-full"
+          className="absolute top-1/4 -right-40 w-[700px] h-[700px] rounded-full blur-3xl"
           style={{
-            background: "radial-gradient(circle, hsl(41 100% 70% / 0.22) 0%, transparent 70%)",
+            background: "radial-gradient(circle, hsl(45 100% 60% / 0.55) 0%, transparent 70%)",
           }}
         />
         <motion.div
-          animate={{
-            opacity: [0.15, 0.4, 0.15],
-            scale: [1, 1.1, 1],
-          }}
+          animate={{ opacity: [0.5, 0.9, 0.5], scale: [1, 1.1, 1] }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-          className="absolute -bottom-40 left-1/4 w-[700px] h-[700px] rounded-full"
+          className="absolute -bottom-40 left-1/4 w-[800px] h-[800px] rounded-full blur-3xl"
           style={{
-            background: "radial-gradient(circle, hsl(277 50% 50% / 0.18) 0%, transparent 70%)",
+            background: "radial-gradient(circle, hsl(277 70% 55% / 0.45) 0%, transparent 70%)",
           }}
         />
         <motion.div
-          animate={{
-            opacity: [0.2, 0.45, 0.2],
-            scale: [1, 1.25, 1],
-          }}
+          animate={{ opacity: [0.6, 0.95, 0.6], scale: [1, 1.25, 1] }}
           transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute top-2/3 left-1/2 w-[400px] h-[400px] rounded-full"
+          className="absolute top-2/3 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl"
           style={{
-            background: "radial-gradient(circle, hsl(41 100% 65% / 0.16) 0%, transparent 70%)",
+            background: "radial-gradient(circle, hsl(45 100% 65% / 0.5) 0%, transparent 70%)",
           }}
         />
       </div>
