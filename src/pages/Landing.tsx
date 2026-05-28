@@ -57,45 +57,9 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Animated gradient orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <motion.div
-          animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.15, 1] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full blur-3xl"
-          style={{
-            background: "radial-gradient(circle, hsl(277 80% 60% / 0.55) 0%, transparent 70%)",
-          }}
-        />
-        <motion.div
-          animate={{ opacity: [0.6, 0.95, 0.6], scale: [1, 1.2, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-1/4 -right-40 w-[700px] h-[700px] rounded-full blur-3xl"
-          style={{
-            background: "radial-gradient(circle, hsl(45 100% 60% / 0.55) 0%, transparent 70%)",
-          }}
-        />
-        <motion.div
-          animate={{ opacity: [0.5, 0.9, 0.5], scale: [1, 1.1, 1] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-          className="absolute -bottom-40 left-1/4 w-[800px] h-[800px] rounded-full blur-3xl"
-          style={{
-            background: "radial-gradient(circle, hsl(277 70% 55% / 0.45) 0%, transparent 70%)",
-          }}
-        />
-        <motion.div
-          animate={{ opacity: [0.6, 0.95, 0.6], scale: [1, 1.25, 1] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute top-2/3 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl"
-          style={{
-            background: "radial-gradient(circle, hsl(45 100% 65% / 0.5) 0%, transparent 70%)",
-          }}
-        />
-      </div>
-
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border relative z-10">
+      <header className="border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <Logo size="sm" />
@@ -104,7 +68,7 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-16 md:py-24 relative z-10">
+      <section className="py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -115,7 +79,7 @@ export default function Landing() {
               <Logo size="xl" />
             </div>
             <div className="flex justify-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Sparkles className="h-4 w-4" />
                 AI-Powered Meeting Intelligence
               </div>
