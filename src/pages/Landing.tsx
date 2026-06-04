@@ -57,9 +57,37 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Animated gradient orbs background */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <motion.div
+          className="absolute -top-32 -left-24 h-[42rem] w-[42rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(55 95% 75% / 0.55), transparent 70%)" }}
+          animate={{ x: [0, 60, -20, 0], y: [0, 40, 20, 0], opacity: [0.55, 0.8, 0.6, 0.55] }}
+          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-1/3 -right-32 h-[38rem] w-[38rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(270 85% 82% / 0.5), transparent 70%)" }}
+          animate={{ x: [0, -50, 30, 0], y: [0, 30, -20, 0], opacity: [0.5, 0.75, 0.55, 0.5] }}
+          transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-0 left-1/4 h-[34rem] w-[34rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(50 100% 80% / 0.45), transparent 70%)" }}
+          animate={{ x: [0, 40, -30, 0], y: [0, -30, 20, 0], opacity: [0.45, 0.7, 0.5, 0.45] }}
+          transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-2/3 right-1/3 h-[30rem] w-[30rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(280 90% 85% / 0.45), transparent 70%)" }}
+          animate={{ x: [0, -40, 20, 0], y: [0, 30, -10, 0], opacity: [0.45, 0.7, 0.5, 0.45] }}
+          transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-border">
+      <header className="relative z-10 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <Logo size="sm" />
