@@ -62,26 +62,26 @@ export default function Landing() {
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <motion.div
           className="absolute -top-32 -left-24 h-[42rem] w-[42rem] rounded-full blur-3xl"
-          style={{ background: "radial-gradient(circle, hsl(55 95% 75% / 0.55), transparent 70%)" }}
-          animate={{ x: [0, 60, -20, 0], y: [0, 40, 20, 0], opacity: [0.55, 0.8, 0.6, 0.55] }}
+          style={{ background: "radial-gradient(circle, hsl(55 95% 65% / 0.70), transparent 70%)" }}
+          animate={{ x: [0, 60, -20, 0], y: [0, 40, 20, 0], opacity: [0.70, 0.90, 0.75, 0.70] }}
           transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute top-1/3 -right-32 h-[38rem] w-[38rem] rounded-full blur-3xl"
-          style={{ background: "radial-gradient(circle, hsl(270 85% 82% / 0.5), transparent 70%)" }}
-          animate={{ x: [0, -50, 30, 0], y: [0, 30, -20, 0], opacity: [0.5, 0.75, 0.55, 0.5] }}
+          style={{ background: "radial-gradient(circle, hsl(270 85% 72% / 0.65), transparent 70%)" }}
+          animate={{ x: [0, -50, 30, 0], y: [0, 30, -20, 0], opacity: [0.65, 0.85, 0.70, 0.65] }}
           transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute bottom-0 left-1/4 h-[34rem] w-[34rem] rounded-full blur-3xl"
-          style={{ background: "radial-gradient(circle, hsl(50 100% 80% / 0.45), transparent 70%)" }}
-          animate={{ x: [0, 40, -30, 0], y: [0, -30, 20, 0], opacity: [0.45, 0.7, 0.5, 0.45] }}
+          style={{ background: "radial-gradient(circle, hsl(50 100% 70% / 0.60), transparent 70%)" }}
+          animate={{ x: [0, 40, -30, 0], y: [0, -30, 20, 0], opacity: [0.60, 0.80, 0.65, 0.60] }}
           transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute top-2/3 right-1/3 h-[30rem] w-[30rem] rounded-full blur-3xl"
-          style={{ background: "radial-gradient(circle, hsl(280 90% 85% / 0.45), transparent 70%)" }}
-          animate={{ x: [0, -40, 20, 0], y: [0, 30, -10, 0], opacity: [0.45, 0.7, 0.5, 0.45] }}
+          style={{ background: "radial-gradient(circle, hsl(280 90% 75% / 0.60), transparent 70%)" }}
+          animate={{ x: [0, -40, 20, 0], y: [0, 30, -10, 0], opacity: [0.60, 0.80, 0.65, 0.60] }}
           transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
