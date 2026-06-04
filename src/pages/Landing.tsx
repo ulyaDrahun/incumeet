@@ -57,9 +57,37 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      {/* Animated gradient orbs background */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <motion.div
+          className="absolute -top-32 -left-24 h-[42rem] w-[42rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(55 95% 75% / 0.55), transparent 70%)" }}
+          animate={{ x: [0, 60, -20, 0], y: [0, 40, 20, 0], opacity: [0.55, 0.8, 0.6, 0.55] }}
+          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-1/3 -right-32 h-[38rem] w-[38rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(270 85% 82% / 0.5), transparent 70%)" }}
+          animate={{ x: [0, -50, 30, 0], y: [0, 30, -20, 0], opacity: [0.5, 0.75, 0.55, 0.5] }}
+          transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-0 left-1/4 h-[34rem] w-[34rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(50 100% 80% / 0.45), transparent 70%)" }}
+          animate={{ x: [0, 40, -30, 0], y: [0, -30, 20, 0], opacity: [0.45, 0.7, 0.5, 0.45] }}
+          transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-2/3 right-1/3 h-[30rem] w-[30rem] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(circle, hsl(280 90% 85% / 0.45), transparent 70%)" }}
+          animate={{ x: [0, -40, 20, 0], y: [0, 30, -10, 0], opacity: [0.45, 0.7, 0.5, 0.45] }}
+          transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-border">
+      <header className="relative z-10 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <Logo size="sm" />
@@ -68,7 +96,7 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-16 md:py-24">
+      <section className="relative z-10 py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -110,7 +138,7 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="relative z-10 py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -151,7 +179,7 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20">
+      <section className="relative z-10 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div
@@ -233,7 +261,7 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary text-primary-foreground">
+      <section className="relative z-10 py-20 bg-primary text-primary-foreground">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -260,7 +288,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-border">
+      <footer className="relative z-10 py-8 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <Logo size="sm" />
